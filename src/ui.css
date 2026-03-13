@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply font-body text-slate-100 antialiased;
+    background-color: #050816;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(94, 234, 212, 0.18), transparent 28%),
+      radial-gradient(circle at 82% 10%, rgba(245, 158, 11, 0.14), transparent 24%),
+      radial-gradient(circle at 55% 78%, rgba(167, 139, 250, 0.14), transparent 28%),
+      linear-gradient(160deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 35%),
+      linear-gradient(180deg, #050816, #0f172a 60%, #111827);
+  }
+
+  html[data-theme='light'] body {
+    @apply text-slate-900;
+    background-color: #f3efe7;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(20, 184, 166, 0.16), transparent 28%),
+      radial-gradient(circle at 82% 10%, rgba(217, 119, 6, 0.14), transparent 24%),
+      radial-gradient(circle at 55% 78%, rgba(124, 58, 237, 0.12), transparent 28%),
+      linear-gradient(180deg, rgba(255,255,255,0.85), rgba(249, 250, 251, 0.96));
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(circle at center, black, transparent 78%);
+    opacity: 0.45;
+  }
+
+  ::selection {
+    background: rgba(94, 234, 212, 0.32);
+    color: inherit;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-[28px] border border-white/10 bg-white/5 shadow-panel backdrop-blur-xl;
+  }
+
+  html[data-theme='light'] .glass-card {
+    @apply border-slate-900/10 bg-white/70;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-teal-300/60 focus:ring-2 focus:ring-teal-300/20;
+  }
+
+  html[data-theme='light'] .field {
+    @apply border-slate-300/70 bg-white text-slate-900 focus:border-teal-700/40 focus:ring-teal-700/10;
+  }
+
+  .soft-label {
+    @apply mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400;
+  }
+
+  html[data-theme='light'] .soft-label {
+    @apply text-slate-500;
+  }
+
+  .pill-button {
+    @apply inline-flex items-center justify-center rounded-full bg-gradient-to-r from-teal-300 via-cyan-300 to-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-400/20 transition hover:-translate-y-0.5;
+  }
+
+  .ghost-button {
+    @apply inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-teal-200/30 hover:bg-white/10;
+  }
+
+  html[data-theme='light'] .ghost-button {
+    @apply border-slate-300 bg-white/80 text-slate-900 hover:border-teal-700/30 hover:bg-white;
+  }
+
+  .tab-chip {
+    @apply rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300 transition;
+  }
+
+  .tab-chip[data-active='true'] {
+    @apply border-transparent bg-white text-slate-950;
+  }
+
+  html[data-theme='light'] .tab-chip {
+    @apply border-slate-300 text-slate-700;
+  }
+
+  html[data-theme='light'] .tab-chip[data-active='true'] {
+    @apply bg-slate-950 text-white;
+  }
+
+  .metric-chip {
+    @apply rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-300;
+  }
+
+  html[data-theme='light'] .metric-chip {
+    @apply border-slate-300 bg-white text-slate-700;
+  }
+}
+
+.smart-ui {
+  color: rgb(241 245 249);
+}
+
+html[data-theme='light'] .smart-ui {
+  color: rgb(15 23 42);
+}
+
+html[data-theme='light'] .smart-ui .text-white,
+html[data-theme='light'] .smart-ui .text-slate-100,
+html[data-theme='light'] .smart-ui .text-white\/90 {
+  color: rgb(15 23 42);
+}
+
+html[data-theme='light'] .smart-ui .text-slate-300,
+html[data-theme='light'] .smart-ui .text-slate-400 {
+  color: rgb(71 85 105);
+}
+
+html[data-theme='light'] .smart-ui .text-teal-200 {
+  color: rgb(13 148 136);
+}
+
+html[data-theme='light'] .smart-ui .border-white\/10,
+html[data-theme='light'] .smart-ui .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme='light'] .smart-ui .bg-slate-950\/35,
+html[data-theme='light'] .smart-ui .bg-slate-950\/25 {
+  background-color: rgba(255, 255, 255, 0.72);
+}
