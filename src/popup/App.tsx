@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { getSettingsFromRuntime, getHistoryFromRuntime, openOptionsInRuntime, translateTextInRuntime, clearHistoryInRuntime } from '../utils/runtime';
+import { clearHistoryInRuntime, getHistoryFromRuntime, getSettingsFromRuntime, openOptionsInRuntime, translateTextInRuntime, updateSettingsInRuntime } from '../utils/runtime';
 import { applyTheme } from '../utils/theme';
 import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS, humanizeLanguage } from '../utils/languages';
 import { ENGINE_META, PROVIDER_ORDER } from '../utils/constants';
@@ -16,7 +16,7 @@ const emptyResult = 'Translation output appears here. Use your current default e
 export default function App() {
   const [settings, setSettings] = useState<TranslationSettings | null>(null);
   const [engineCategory, setEngineCategory] = useState<EngineCategory>('standard');
-  const [engine, setEngine] = useState<EngineProvider>('google');
+  const [engine, setEngine] = useState<EngineProvider>('microsoft');
   const [sourceLanguage, setSourceLanguage] = useState('auto');
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [input, setInput] = useState('');
@@ -48,7 +48,7 @@ export default function App() {
 
   useEffect(() => {
     if (!engines.includes(engine)) {
-      setEngine(engines[0] ?? 'google');
+      setEngine(engines[0] ?? 'microsoft');
     }
   }, [engines, engine]);
 
@@ -95,6 +95,17 @@ export default function App() {
   const handleClearHistory = async (): Promise<void> => {
     await clearHistoryInRuntime();
     setHistory([]);
+  };
+
+  const handleEngineChange = async (nextEngine: EngineProvider): Promise<void> => {
+    setEngine(nextEngine);
+    setSettings((current) => (current ? { ...current, defaultEngine: nextEngine } : current));
+
+    try {
+      await updateSettingsInRuntime({ defaultEngine: nextEngine });
+    } catch (runtimeError) {
+      setError(runtimeError instanceof Error ? runtimeError.message : 'Failed to update default engine.');
+    }
   };
 
   return (
@@ -159,7 +170,7 @@ export default function App() {
           <section className="grid gap-3">
             <div>
               <label className="soft-label">Engine</label>
-              <select className="field" value={engine} onChange={(event) => setEngine(event.target.value as EngineProvider)}>
+              <select className="field" value={engine} onChange={(event) => void handleEngineChange(event.target.value as EngineProvider)}>
                 {engines.map((provider) => (
                   <option key={provider} value={provider}>
                     {ENGINE_META[provider].label}

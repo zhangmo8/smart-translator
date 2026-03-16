@@ -1,3 +1,5 @@
+import './styles.css';
+
 import { PageTranslator } from './page-translate';
 import { SelectionTranslator } from './selection';
 import { SilentTranslator } from './silent-translate';
@@ -21,6 +23,7 @@ async function initialize(): Promise<void> {
   const pageTranslator = new PageTranslator(settingsGetter);
   const selectionTranslator = new SelectionTranslator(settingsGetter);
   const silentTranslator = new SilentTranslator(settingsGetter, pageTranslator);
+  selectionTranslator.updateDisplaySettings(currentSettings.showSelectionIcon);
   const hotkeys = new HotkeyManager(currentSettings.hotkeys, {
     selection: async () => {
       const handledInput = await selectionTranslator.translateFocusedInput();
@@ -57,6 +60,7 @@ async function initialize(): Promise<void> {
 
     currentSettings = changes.settings.newValue as TranslationSettings;
     hotkeys.updateHotkeys(currentSettings.hotkeys);
+    selectionTranslator.updateDisplaySettings(currentSettings.showSelectionIcon);
   });
 
   chrome.runtime.onMessage.addListener((message: ContentMessage, _sender, sendResponse) => {

@@ -32,7 +32,7 @@ export class PageTranslator {
     await this.translatePage(showBar);
   }
 
-  async translatePage(showBar = true): Promise<void> {
+  async translatePage(showBar = true): Promise<boolean> {
     if (showBar) {
       this.ensureBar();
     }
@@ -40,30 +40,49 @@ export class PageTranslator {
     const nodes = this.collectTextNodes(document.body);
     if (!nodes.length) {
       this.setStatus('Nothing translatable found on this page.');
-      return;
+      return false;
     }
 
-    this.setStatus(`Scanning ${nodes.length} text fragments…`);
-    await this.translateNodes(nodes, (done, total) => {
-      this.setStatus(`Translated ${done} / ${total} fragments`);
-    });
+    this.setStatus(`Scanning ${nodes.length} text fragments...`);
+    try {
+      await this.translateNodes(nodes, (done, total) => {
+        this.setStatus(`Translated ${done} / ${total} fragments`);
+      });
+    } catch (error: unknown) {
+      this.translated = false;
+      this.showingOriginal = false;
+      this.ensureBar();
+      this.updateBarButtons();
+      this.setStatus(this.formatError(error), 'error');
+      return false;
+    }
 
     this.translated = true;
     this.showingOriginal = false;
     this.updateBarButtons();
-    this.setStatus('Page translated. Toggle original anytime.');
+    this.setStatus('Page translated. Toggle original anytime.', 'success');
+    return true;
   }
 
-  async translateElement(element: HTMLElement): Promise<void> {
+  async translateElement(element: HTMLElement): Promise<boolean> {
     const nodes = this.collectTextNodes(element);
     if (!nodes.length) {
-      return;
+      return false;
     }
 
-    await this.translateNodes(nodes);
-    this.translated = true;
-    this.showingOriginal = false;
-    this.updateBarButtons();
+    try {
+      await this.translateNodes(nodes);
+      this.translated = true;
+      this.showingOriginal = false;
+      this.ensureBar();
+      this.updateBarButtons();
+      this.setStatus('Block translated. Press the shortcut again to restore it.', 'success');
+      return true;
+    } catch (error: unknown) {
+      this.ensureBar();
+      this.setStatus(this.formatError(error), 'error');
+      return false;
+    }
   }
 
   restoreElement(element: HTMLElement): void {
@@ -268,6 +287,7 @@ export class PageTranslator {
           </div>
         </div>
         <div class="smart-translator-bar__actions">
+          <button class="smart-translator-button smart-translator-button--ghost" data-action="settings">Settings</button>
           <button class="smart-translator-button smart-translator-button--ghost" data-action="toggle-original">Show original</button>
           <button class="smart-translator-button smart-translator-button--ghost" data-action="restore">Restore</button>
           <button class="smart-translator-button" data-action="close">Close</button>
@@ -284,6 +304,10 @@ export class PageTranslator {
 
       if (action === 'toggle-original') {
         this.toggleOriginalVisibility();
+      }
+
+      if (action === 'settings') {
+        void chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
       }
 
       if (action === 'restore') {
@@ -309,7 +333,11 @@ export class PageTranslator {
     this.toggleOriginalButton = null;
   }
 
-  private setStatus(text: string): void {
+  private setStatus(text: string, tone: 'default' | 'success' | 'error' = 'default'): void {
+    if (this.bar) {
+      this.bar.dataset.tone = tone;
+    }
+
     if (this.statusLabel) {
       this.statusLabel.textContent = text;
     }
@@ -320,5 +348,13 @@ export class PageTranslator {
       this.toggleOriginalButton.textContent = this.showingOriginal ? 'Show translation' : 'Show original';
       this.toggleOriginalButton.disabled = !this.translated;
     }
+  }
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message;
+    }
+
+    return 'Translation failed. Please try again.';
   }
 }

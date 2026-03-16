@@ -1,9 +1,9 @@
 import type { EngineMeta, EngineProvider } from '../types';
 
 export const PROVIDER_ORDER: EngineProvider[] = [
-  'google',
   'microsoft',
   'deepl',
+  'google',
   'libretranslate',
   'openai',
   'claude',

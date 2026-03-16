@@ -47,9 +47,10 @@ export function createDefaultSettings(browserLanguage = getBrowserLanguage()): T
   return {
     sourceLanguage: 'auto',
     targetLanguage: normalizeLanguageCode(browserLanguage),
-    defaultEngine: 'libretranslate',
+    defaultEngine: 'microsoft',
     theme: 'auto',
     cacheEnabled: true,
+    showSelectionIcon: true,
     silentMode: 'paragraph',
     hotkeys: DEFAULT_HOTKEYS,
     engines: createDefaultEngineSettings(),

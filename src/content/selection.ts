@@ -3,11 +3,27 @@ import { isEditableElement } from '../utils/hotkeys';
 
 type SettingsGetter = () => Promise<TranslationSettings>;
 
+interface TooltipAnchor {
+  left: number;
+  top: number;
+  bottom: number;
+  width: number;
+}
+
 export class SelectionTranslator {
   private tooltip: HTMLDivElement | null = null;
-  private resultPanel: HTMLDivElement | null = null;
+  private triggerButton: HTMLButtonElement | null = null;
+  private titleNode: HTMLDivElement | null = null;
+  private resultNode: HTMLDivElement | null = null;
   private translateButton: HTMLButtonElement | null = null;
-  private selectionRect: DOMRect | null = null;
+  private settingsButton: HTMLButtonElement | null = null;
+  private anchor: TooltipAnchor | null = null;
+  private activeSelectionText = '';
+  private hideTimer: number | null = null;
+  private isPointerInsideTooltip = false;
+  private isPinned = false;
+  private isTranslating = false;
+  private showSelectionIcon = true;
 
   constructor(private readonly getSettings: SettingsGetter) {}
 
@@ -23,31 +39,30 @@ export class SelectionTranslator {
     document.removeEventListener('mouseup', this.handleSelectionChange);
     document.removeEventListener('scroll', this.repositionTooltip, true);
     document.removeEventListener('mousedown', this.handleDocumentMouseDown, true);
+    this.clearHideTimer();
+  }
+
+  updateDisplaySettings(showSelectionIcon: boolean): void {
+    this.showSelectionIcon = showSelectionIcon;
+    if (!showSelectionIcon && this.tooltip?.dataset.state === 'icon') {
+      this.hideTooltip(true);
+    }
   }
 
   async translateSelection(forcedText?: string): Promise<boolean> {
-    const text = forcedText ?? this.getCurrentSelectionText();
+    const text = (forcedText ?? this.activeSelectionText) || this.getCurrentSelectionText();
     if (!text) {
       return false;
     }
 
-    const settings = await this.getSettings();
-    const response = (await chrome.runtime.sendMessage({
-      type: 'TRANSLATE_TEXT',
-      payload: {
-        text,
-        sourceLanguage: settings.sourceLanguage,
-        targetLanguage: settings.targetLanguage,
-        engine: settings.defaultEngine,
-      },
-    })) as TranslateResponse & { error?: string };
-
-    if (response.error) {
-      this.showResult(`Error: ${response.error}`, true);
+    this.activeSelectionText = text;
+    this.showLoadingState();
+    const translated = await this.requestTranslation(text, false);
+    if (!translated) {
       return false;
     }
 
-    this.showResult(response.translatedText, false);
+    this.showResult(translated, false);
     return true;
   }
 
@@ -65,7 +80,9 @@ export class SelectionTranslator {
         return false;
       }
 
-      const translated = await this.requestTranslation(sourceText);
+      this.captureElementAnchor(activeElement);
+      this.activeSelectionText = sourceText.trim();
+      const translated = await this.requestTranslation(sourceText, false);
       if (!translated) {
         return false;
       }
@@ -76,6 +93,7 @@ export class SelectionTranslator {
         activeElement.value = translated;
       }
 
+      this.hideTooltip();
       this.flash(activeElement);
       return true;
     }
@@ -85,51 +103,87 @@ export class SelectionTranslator {
       return false;
     }
 
-    const translated = await this.requestTranslation(sourceText);
+    this.captureElementAnchor(activeElement);
+    this.activeSelectionText = sourceText;
+    const translated = await this.requestTranslation(sourceText, false);
     if (!translated) {
       return false;
     }
 
     activeElement.innerText = translated;
+    this.hideTooltip();
     this.flash(activeElement);
     return true;
   }
 
-  private requestTranslation = async (text: string): Promise<string | null> => {
-    const settings = await this.getSettings();
-    const response = (await chrome.runtime.sendMessage({
-      type: 'TRANSLATE_TEXT',
-      payload: {
-        text,
-        sourceLanguage: settings.sourceLanguage,
-        targetLanguage: settings.targetLanguage,
-        engine: settings.defaultEngine,
-      },
-    })) as TranslateResponse & { error?: string };
-
-    if (response.error) {
-      this.showResult(`Error: ${response.error}`, true);
-      return null;
+  private requestTranslation = async (text: string, showLoading = true): Promise<string | null> => {
+    if (showLoading) {
+      this.showLoadingState();
     }
 
-    return response.translatedText;
+    try {
+      const settings = await this.getSettings();
+      const response = (await chrome.runtime.sendMessage({
+        type: 'TRANSLATE_TEXT',
+        payload: {
+          text,
+          sourceLanguage: settings.sourceLanguage,
+          targetLanguage: settings.targetLanguage,
+          engine: settings.defaultEngine,
+        },
+      })) as TranslateResponse & { error?: string };
+
+      if (response.error) {
+        this.showResult(response.error, true);
+        return null;
+      }
+
+      return response.translatedText;
+    } catch (error: unknown) {
+      this.showResult(error instanceof Error ? error.message : 'Translation failed. Please try again.', true);
+      return null;
+    } finally {
+      this.isTranslating = false;
+      if (this.translateButton) {
+        this.translateButton.disabled = false;
+      }
+    }
   };
 
   private handleSelectionChange = (): void => {
-    const text = this.getCurrentSelectionText();
-    if (!text) {
-      this.hideTooltip();
-      return;
-    }
-
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
-      this.hideTooltip();
+      this.handleEmptySelection();
       return;
     }
 
-    this.selectionRect = selection.getRangeAt(0).getBoundingClientRect();
+    if (this.isSelectionInsideUi(selection)) {
+      return;
+    }
+
+    const text = selection.toString().trim();
+    if (!text) {
+      this.handleEmptySelection();
+      return;
+    }
+
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    this.anchor = {
+      left: rect.left + window.scrollX,
+      top: rect.top + window.scrollY,
+      bottom: rect.bottom + window.scrollY,
+      width: rect.width,
+    };
+    this.activeSelectionText = text;
+    this.isPinned = false;
+    this.clearHideTimer();
+    if (!this.showSelectionIcon) {
+      this.hideTooltip(true);
+      return;
+    }
+
     this.ensureTooltip();
+    this.showIconState();
     this.repositionTooltip();
   };
 
@@ -148,6 +202,30 @@ export class SelectionTranslator {
     return window.getSelection()?.toString().trim() ?? '';
   }
 
+  private handleEmptySelection(): void {
+    if (this.isPointerInsideTooltip || this.isPinned || this.isTranslating || Boolean(this.activeSelectionText)) {
+      return;
+    }
+
+    this.scheduleHide(120);
+  }
+
+  private isSelectionInsideUi(selection: Selection): boolean {
+    const anchorParent = selection.anchorNode instanceof Element ? selection.anchorNode : selection.anchorNode?.parentElement;
+    const focusParent = selection.focusNode instanceof Element ? selection.focusNode : selection.focusNode?.parentElement;
+    return Boolean(anchorParent?.closest('[data-smart-translator-ui="true"]') || focusParent?.closest('[data-smart-translator-ui="true"]'));
+  }
+
+  private captureElementAnchor(element: HTMLElement): void {
+    const rect = element.getBoundingClientRect();
+    this.anchor = {
+      left: rect.left + window.scrollX,
+      top: rect.top + window.scrollY,
+      bottom: rect.bottom + window.scrollY,
+      width: Math.max(rect.width, 160),
+    };
+  }
+
   private ensureTooltip(): void {
     if (this.tooltip) {
       return;
@@ -157,65 +235,214 @@ export class SelectionTranslator {
     tooltip.className = 'smart-translator-tooltip';
     tooltip.setAttribute('data-smart-translator-ui', 'true');
     tooltip.dataset.smartTranslatorUi = 'true';
+    tooltip.dataset.state = 'icon';
+    tooltip.dataset.tone = 'default';
     tooltip.innerHTML = `
-      <button class="smart-translator-button" data-role="translate">Translate</button>
-      <div class="smart-translator-tooltip__panel" data-role="panel" hidden>
-        <div class="smart-translator-tooltip__label">Translation</div>
-        <div class="smart-translator-tooltip__text" data-role="result"></div>
+      <button class="smart-translator-selection-trigger" type="button" data-role="trigger" aria-label="Translate selection">
+        <span class="smart-translator-selection-trigger__glyph">T</span>
+      </button>
+      <div class="smart-translator-tooltip__shell">
+        <div class="smart-translator-tooltip__header">
+          <div>
+            <div class="smart-translator-tooltip__eyebrow">Selection translator</div>
+            <div class="smart-translator-tooltip__title" data-role="title">Ready to translate</div>
+          </div>
+          <button class="smart-translator-icon-button" type="button" data-role="close" aria-label="Close">x</button>
+        </div>
+        <div class="smart-translator-tooltip__body">
+          <div class="smart-translator-tooltip__text" data-role="result">
+            Keep the selection, then translate it inline.
+          </div>
+        </div>
+        <div class="smart-translator-tooltip__footer">
+          <button class="smart-translator-button" type="button" data-role="translate">Translate selection</button>
+          <button class="smart-translator-button smart-translator-button--ghost" type="button" data-role="settings" hidden>Open settings</button>
+        </div>
       </div>
-    `;
+    `.trim();
+
+    tooltip.addEventListener('pointerenter', () => {
+      this.isPointerInsideTooltip = true;
+      this.clearHideTimer();
+    });
+
+    tooltip.addEventListener('pointerleave', () => {
+      this.isPointerInsideTooltip = false;
+      if (!this.getCurrentSelectionText() && !this.activeSelectionText && !this.isPinned && !this.isTranslating) {
+        this.scheduleHide(120);
+      }
+    });
+
+    tooltip.addEventListener('mousedown', (event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('button')) {
+        event.preventDefault();
+      }
+    });
 
     tooltip.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.dataset.role === 'translate') {
-        void this.translateSelection();
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-role]');
+      if (!target?.dataset.role) {
+        return;
+      }
+
+      if (target.dataset.role === 'trigger') {
+        void this.translateSelection(this.activeSelectionText);
+      }
+
+      if (target.dataset.role === 'translate') {
+        void this.translateSelection(this.activeSelectionText);
+      }
+
+      if (target.dataset.role === 'settings') {
+        void chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+      }
+
+      if (target.dataset.role === 'close') {
+        this.hideTooltip();
       }
     });
 
     document.documentElement.appendChild(tooltip);
     this.tooltip = tooltip;
+    this.triggerButton = tooltip.querySelector('[data-role="trigger"]');
     this.translateButton = tooltip.querySelector('[data-role="translate"]');
-    this.resultPanel = tooltip.querySelector('[data-role="panel"]');
+    this.settingsButton = tooltip.querySelector('[data-role="settings"]');
+    this.titleNode = tooltip.querySelector('[data-role="title"]');
+    this.resultNode = tooltip.querySelector('[data-role="result"]');
   }
 
   private repositionTooltip = (): void => {
-    if (!this.tooltip || !this.selectionRect) {
+    if (!this.tooltip || !this.anchor) {
       return;
     }
 
-    const top = Math.max(8, this.selectionRect.top + window.scrollY - 52);
-    const left = Math.max(8, this.selectionRect.left + window.scrollX + this.selectionRect.width / 2 - 70);
+    const tooltipRect = this.tooltip.getBoundingClientRect();
+    const tooltipWidth = tooltipRect.width || 360;
+    const tooltipHeight = tooltipRect.height || 180;
+    const viewportPadding = 12;
+    const minLeft = window.scrollX + viewportPadding;
+    const maxLeft = window.scrollX + window.innerWidth - tooltipWidth - viewportPadding;
+    const isIconState = this.tooltip.dataset.state === 'icon';
+    const rawLeft = isIconState
+      ? this.anchor.left + this.anchor.width - tooltipWidth * 0.55
+      : this.anchor.left + this.anchor.width / 2 - tooltipWidth / 2;
+    const left = Math.min(Math.max(rawLeft, minLeft), Math.max(minLeft, maxLeft));
+    const prefersAbove = this.anchor.top - window.scrollY > tooltipHeight + 24;
+    const rawTop = prefersAbove ? this.anchor.top - tooltipHeight - (isIconState ? 10 : 16) : this.anchor.bottom + (isIconState ? 8 : 16);
+    const minTop = window.scrollY + viewportPadding;
+    const maxTop = window.scrollY + window.innerHeight - tooltipHeight - viewportPadding;
+    const top = Math.min(Math.max(rawTop, minTop), Math.max(minTop, maxTop));
     this.tooltip.style.top = `${top}px`;
     this.tooltip.style.left = `${left}px`;
   };
 
-  private showResult(text: string, isError: boolean): void {
+  private showIconState(): void {
     this.ensureTooltip();
-    if (!this.tooltip || !this.resultPanel) {
+    if (!this.tooltip || !this.resultNode || !this.titleNode || !this.translateButton) {
       return;
     }
 
-    const resultNode = this.tooltip.querySelector('[data-role="result"]');
-    if (resultNode) {
-      resultNode.textContent = text;
-      resultNode.classList.toggle('smart-translator-tooltip__text--error', isError);
+    this.tooltip.dataset.state = 'icon';
+    this.tooltip.dataset.tone = 'default';
+    this.titleNode.textContent = 'Selection ready';
+    this.resultNode.textContent = 'Click the icon to translate this selection.';
+    this.resultNode.classList.remove('smart-translator-tooltip__text--error');
+    this.translateButton.textContent = 'Translate again';
+    this.translateButton.disabled = false;
+    if (this.settingsButton) {
+      this.settingsButton.hidden = true;
+    }
+  }
+
+  private showLoadingState(): void {
+    this.ensureTooltip();
+    if (!this.tooltip || !this.resultNode || !this.titleNode || !this.translateButton) {
+      return;
     }
 
-    this.resultPanel.hidden = false;
-    this.translateButton?.classList.add('smart-translator-button--ghost');
-    if (!this.selectionRect && this.tooltip) {
+    this.clearHideTimer();
+    this.isPinned = true;
+    this.isTranslating = true;
+    this.tooltip.dataset.state = 'loading';
+    this.tooltip.dataset.tone = 'default';
+    this.titleNode.textContent = 'Translating selection';
+    this.resultNode.textContent = 'Sending your text to the current engine.';
+    this.resultNode.classList.remove('smart-translator-tooltip__text--error');
+    this.translateButton.textContent = 'Translating...';
+    this.translateButton.disabled = true;
+    if (this.settingsButton) {
+      this.settingsButton.hidden = true;
+    }
+    this.scheduleReposition();
+  }
+
+  private showResult(text: string, isError: boolean): void {
+    this.ensureTooltip();
+    if (!this.tooltip || !this.resultNode || !this.titleNode || !this.translateButton) {
+      return;
+    }
+
+    this.clearHideTimer();
+    this.isPinned = true;
+    this.tooltip.dataset.state = isError ? 'error' : 'result';
+    this.tooltip.dataset.tone = isError ? 'error' : 'success';
+    this.titleNode.textContent = isError ? 'Translation needs attention' : 'Translation ready';
+    this.resultNode.textContent = text;
+    this.resultNode.classList.toggle('smart-translator-tooltip__text--error', isError);
+    this.translateButton.textContent = isError ? 'Try again' : 'Translate again';
+    this.translateButton.disabled = false;
+
+    if (this.settingsButton) {
+      this.settingsButton.hidden = !isError;
+    }
+
+    if (!this.anchor && this.tooltip) {
       this.tooltip.style.top = `${window.scrollY + 24}px`;
       this.tooltip.style.left = `${window.scrollX + 24}px`;
     }
-    this.repositionTooltip();
+
+    this.scheduleReposition();
   }
 
-  private hideTooltip(): void {
+  private scheduleReposition(): void {
+    window.requestAnimationFrame(() => this.repositionTooltip());
+  }
+
+  private scheduleHide(delay: number): void {
+    this.clearHideTimer();
+    this.hideTimer = window.setTimeout(() => {
+      if (this.isPointerInsideTooltip || this.isPinned || this.isTranslating) {
+        return;
+      }
+
+      this.hideTooltip();
+    }, delay);
+  }
+
+  private clearHideTimer(): void {
+    if (this.hideTimer !== null) {
+      window.clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+  }
+
+  private hideTooltip(preserveSelectionText = false): void {
+    this.clearHideTimer();
     this.tooltip?.remove();
     this.tooltip = null;
-    this.resultPanel = null;
+    this.triggerButton = null;
+    this.titleNode = null;
+    this.resultNode = null;
     this.translateButton = null;
-    this.selectionRect = null;
+    this.settingsButton = null;
+    this.anchor = null;
+    if (!preserveSelectionText) {
+      this.activeSelectionText = '';
+    }
+    this.isPointerInsideTooltip = false;
+    this.isPinned = false;
+    this.isTranslating = false;
   }
 
   private flash(element: HTMLElement): void {

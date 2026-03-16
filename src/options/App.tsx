@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { DEFAULT_HOTKEYS, createDefaultSettings } from '../store/settings';
 import { ENGINE_META, PROVIDER_ORDER } from '../utils/constants';
@@ -6,28 +6,59 @@ import { eventToHotkey, normalizeHotkey } from '../utils/hotkeys';
 import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS } from '../utils/languages';
 import { getSettingsFromRuntime, updateSettingsInRuntime } from '../utils/runtime';
 import { applyTheme } from '../utils/theme';
-import type { EngineCategory, EngineProvider, HotkeyConfig, TranslationSettings } from '../types';
+import type { EngineCategory, EngineProvider, EngineSettings, HotkeyConfig, TranslationSettings } from '../types';
 
 function cloneSettings(settings: TranslationSettings): TranslationSettings {
   return JSON.parse(JSON.stringify(settings)) as TranslationSettings;
 }
 
-function HotkeyInput({
+const behaviorNotes = [
+  {
+    hotkey: 'Alt+T',
+    text: 'translates the current selection or the focused input and writes the result back in place.',
+  },
+  {
+    hotkey: 'Alt+Q',
+    text: 'runs silent translation in paragraph-under-cursor mode or full-page mode, depending on your current preference.',
+  },
+  {
+    hotkey: 'Alt+W',
+    text: 'starts a full-page DOM translation with the floating action bar attached to the page.',
+  },
+  {
+    hotkey: 'Alt+R',
+    text: 'restores the original page immediately when you want to back out.',
+  },
+];
+
+const sectionLabels: Record<EngineCategory, string> = {
+  standard: 'Standard translation engines',
+  ai: 'AI translation engines',
+};
+
+const sectionDescriptions: Record<EngineCategory, string> = {
+  standard: 'Credential-driven APIs and hosted translation endpoints for stable throughput.',
+  ai: 'Promptable translation models when you need tone control, custom models, or provider-specific behavior.',
+};
+
+const HotkeyInput = memo(function HotkeyInput({
   label,
+  field,
   value,
   onChange,
 }: {
   label: string;
+  field: keyof HotkeyConfig;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (field: keyof HotkeyConfig, value: string) => void;
 }) {
   return (
-    <div>
+    <div className="settings-field-stack">
       <label className="soft-label">{label}</label>
       <input
         className="field"
         value={value}
-        onChange={(event) => onChange(normalizeHotkey(event.target.value))}
+        onChange={(event) => onChange(field, normalizeHotkey(event.target.value))}
         onKeyDown={(event) => {
           if (event.key === 'Tab') {
             return;
@@ -35,44 +66,48 @@ function HotkeyInput({
 
           if (event.key === 'Backspace' || event.key === 'Delete') {
             event.preventDefault();
-            onChange('');
+            onChange(field, '');
             return;
           }
 
           event.preventDefault();
           const hotkey = eventToHotkey(event.nativeEvent);
           if (hotkey) {
-            onChange(hotkey);
+            onChange(field, hotkey);
           }
         }}
       />
     </div>
   );
-}
+});
 
-function ProviderCard({
+const ProviderCard = memo(function ProviderCard({
   provider,
-  settings,
+  config,
   onProviderChange,
 }: {
   provider: EngineProvider;
-  settings: TranslationSettings;
+  config: EngineSettings[EngineProvider];
   onProviderChange: (provider: EngineProvider, field: string, value: string) => void;
 }) {
   const meta = ENGINE_META[provider];
-  const config = settings.engines[provider];
 
   return (
-    <article className="glass-card flex flex-col gap-4 p-5">
-      <div>
-        <div className="metric-chip inline-flex">{meta.category}</div>
-        <h3 className="mt-3 text-lg font-semibold text-white">{meta.label}</h3>
-        <p className="mt-1 text-sm text-slate-400">{meta.docsHint}</p>
-      </div>
+    <article className="glass-card provider-card flex flex-col gap-5 p-5 md:p-6">
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="metric-chip inline-flex">{meta.category}</div>
+          <div className="settings-provider-badge">{meta.requiresApiKey ? 'Credential required' : 'Ready by default'}</div>
+        </div>
+        <div className="space-y-2">
+          <h3 className="settings-provider-title">{meta.label}</h3>
+          <p className="text-sm leading-6 text-slate-400">{meta.docsHint}</p>
+        </div>
+      </header>
 
       <div className="grid gap-4">
-        <div>
-          <label className="soft-label">API Key</label>
+        <div className="settings-field-stack">
+          <label className="soft-label">API key</label>
           <input
             className="field"
             type="password"
@@ -83,7 +118,7 @@ function ProviderCard({
         </div>
 
         {meta.requiresRegion ? (
-          <div>
+          <div className="settings-field-stack">
             <label className="soft-label">Region</label>
             <input
               className="field"
@@ -95,7 +130,7 @@ function ProviderCard({
         ) : null}
 
         {provider === 'deepl' || provider === 'libretranslate' ? (
-          <div>
+          <div className="settings-field-stack">
             <label className="soft-label">API URL</label>
             <input
               className="field"
@@ -107,7 +142,7 @@ function ProviderCard({
         ) : null}
 
         {provider === 'doubao' ? (
-          <div>
+          <div className="settings-field-stack">
             <label className="soft-label">Endpoint</label>
             <input
               className="field"
@@ -120,7 +155,7 @@ function ProviderCard({
 
         {meta.category === 'ai' ? (
           <>
-            <div>
+            <div className="settings-field-stack">
               <label className="soft-label">Model</label>
               <input
                 className="field"
@@ -130,10 +165,10 @@ function ProviderCard({
               />
             </div>
 
-            <div>
-              <label className="soft-label">System Prompt</label>
+            <div className="settings-field-stack">
+              <label className="soft-label">System prompt</label>
               <textarea
-                className="field min-h-[116px] resize-y"
+                className="field min-h-[140px] resize-y"
                 placeholder="Optional provider-specific translation system prompt"
                 value={config.systemPrompt ?? ''}
                 onChange={(event) => onProviderChange(provider, 'systemPrompt', event.target.value)}
@@ -144,12 +179,12 @@ function ProviderCard({
       </div>
     </article>
   );
-}
+});
 
 export default function App() {
   const [settings, setSettings] = useState<TranslationSettings | null>(null);
   const [draft, setDraft] = useState<TranslationSettings | null>(null);
-  const [status, setStatus] = useState('Loading settings…');
+  const [status, setStatus] = useState('Loading settings...');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -172,42 +207,89 @@ export default function App() {
     [],
   );
 
-  if (!draft) {
-    return <main className="min-h-screen p-10 text-sm text-slate-300">Loading smart-translator options…</main>;
-  }
+  const updateHotkey = useCallback((field: keyof HotkeyConfig, value: string): void => {
+    setDraft((current) => {
+      if (!current) {
+        return current;
+      }
 
-  const updateHotkey = (field: keyof HotkeyConfig, value: string): void => {
-    setDraft({
-      ...draft,
-      hotkeys: {
-        ...draft.hotkeys,
-        [field]: value,
-      },
-    });
-  };
-
-  const updateProvider = (provider: EngineProvider, field: string, value: string): void => {
-    setDraft({
-      ...draft,
-      engines: {
-        ...draft.engines,
-        [provider]: {
-          ...draft.engines[provider],
+      return {
+        ...current,
+        hotkeys: {
+          ...current.hotkeys,
           [field]: value,
         },
-      },
+      };
     });
-  };
+  }, []);
+
+  const updateProvider = useCallback((provider: EngineProvider, field: string, value: string): void => {
+    setDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        engines: {
+          ...current.engines,
+          [provider]: {
+            ...current.engines[provider],
+            [field]: value,
+          },
+        },
+      };
+    });
+  }, []);
+
+  const updateTopLevelField = useCallback(<K extends keyof TranslationSettings>(field: K, value: TranslationSettings[K]): void => {
+    setDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [field]: value,
+      };
+    });
+  }, []);
+
+  const handleThemeChange = useCallback(
+    (theme: TranslationSettings['theme']): void => {
+      updateTopLevelField('theme', theme);
+      applyTheme(theme);
+    },
+    [updateTopLevelField],
+  );
+
+  const handleCacheToggle = useCallback((): void => {
+    setDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        cacheEnabled: !current.cacheEnabled,
+      };
+    });
+  }, []);
 
   const save = async (): Promise<void> => {
+    if (!draft) {
+      return;
+    }
+
     setSaving(true);
-    setStatus('Saving preferences…');
+    setStatus('Saving preferences...');
+
     try {
       const saved = await updateSettingsInRuntime(draft);
       setSettings(saved);
       setDraft(cloneSettings(saved));
       applyTheme(saved.theme);
-      setStatus('Saved to chrome.storage.sync.');
+      setStatus('Preferences synced to chrome.storage.sync.');
     } catch (error: unknown) {
       setStatus(error instanceof Error ? error.message : 'Failed to save settings.');
     } finally {
@@ -220,43 +302,51 @@ export default function App() {
     defaults.hotkeys = DEFAULT_HOTKEYS;
     setDraft(defaults);
     applyTheme(defaults.theme);
-    setStatus('Reset draft to defaults. Save to apply.');
+    setStatus('Draft reset to defaults. Save when you want to apply it.');
   };
 
+  if (!draft) {
+    return <main className="min-h-screen p-10 text-sm text-slate-300">Loading smart-translator options...</main>;
+  }
+
+  const statusTone = saving ? 'saving' : status.toLowerCase().includes('failed') ? 'error' : 'ready';
+  const currentEngineLabel = ENGINE_META[(settings ?? draft).defaultEngine].label;
+
   return (
-    <main className="smart-ui min-h-screen px-6 py-8 text-slate-100 md:px-10 lg:px-12">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="glass-card relative overflow-hidden px-6 py-8 md:px-8">
-          <div className="absolute inset-0 bg-noise opacity-80" />
-          <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-3xl">
+    <main className="smart-ui smart-ui--options min-h-screen px-4 py-5 text-slate-100 md:px-7 md:py-7 xl:px-10">
+      <div className="settings-page mx-auto max-w-[1680px] space-y-6">
+        <section className="glass-card settings-hero relative overflow-hidden px-5 py-6 md:px-8 md:py-8">
+          <div className="settings-hero__glow" />
+          <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.55fr)] xl:items-end">
+            <div className="max-w-4xl">
               <div className="metric-chip inline-flex">smart-translator · v{__APP_VERSION__}</div>
-              <h1 className="mt-4 font-display text-4xl leading-tight text-white md:text-5xl">A browser-native translation suite with real range.</h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Tune language defaults, API engines, AI prompts, silent translation modes, and page-level hotkeys in one place. Syncs through
-                <span className="mx-1 text-teal-200">chrome.storage.sync</span>
-                and uses the background service worker for every translation request.
+              <h1 className="settings-hero__title mt-5">Shape how translation feels before you ever trigger it.</h1>
+              <p className="settings-hero__copy mt-5 max-w-3xl">
+                Dial in language defaults, engine credentials, AI prompts, silent mode, and keyboard behavior from one faster control surface. The
+                page is tuned for sync storage, background-only requests, and quick provider-by-provider edits without the UI dragging behind you.
               </p>
             </div>
 
-            <div className="space-y-3 md:text-right">
-              <div className="text-sm text-slate-300">{status}</div>
-              <div className="flex flex-wrap gap-3 md:justify-end">
+            <div className="settings-hero__actions">
+              <div className="settings-status" data-tone={statusTone}>
+                {status}
+              </div>
+              <div className="flex flex-wrap gap-3 xl:justify-end">
                 <button className="ghost-button" onClick={resetDefaults}>
                   Reset draft
                 </button>
                 <button className="pill-button" disabled={saving} onClick={() => void save()}>
-                  {saving ? 'Saving…' : 'Save preferences'}
+                  {saving ? 'Saving...' : 'Save preferences'}
                 </button>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-6">
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between gap-4">
+        <section className="settings-main-grid">
+          <div className="space-y-6 min-w-0">
+            <section className="glass-card settings-panel px-5 py-6 md:px-6">
+              <div className="settings-panel__header">
                 <div>
                   <div className="soft-label">Language settings</div>
                   <h2 className="text-2xl font-semibold text-white">Default translation direction</h2>
@@ -264,10 +354,10 @@ export default function App() {
                 <div className="metric-chip">Source → Target</div>
               </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div>
+              <div className="settings-direction-grid mt-6">
+                <div className="settings-field-stack">
                   <label className="soft-label">Source language</label>
-                  <select className="field" value={draft.sourceLanguage} onChange={(event) => setDraft({ ...draft, sourceLanguage: event.target.value })}>
+                  <select className="field" value={draft.sourceLanguage} onChange={(event) => updateTopLevelField('sourceLanguage', event.target.value)}>
                     {[AUTO_LANGUAGE_OPTION, ...LANGUAGE_OPTIONS].map((language) => (
                       <option key={language.value} value={language.value}>
                         {language.label}
@@ -275,9 +365,10 @@ export default function App() {
                     ))}
                   </select>
                 </div>
-                <div>
+
+                <div className="settings-field-stack">
                   <label className="soft-label">Target language</label>
-                  <select className="field" value={draft.targetLanguage} onChange={(event) => setDraft({ ...draft, targetLanguage: event.target.value })}>
+                  <select className="field" value={draft.targetLanguage} onChange={(event) => updateTopLevelField('targetLanguage', event.target.value)}>
                     {LANGUAGE_OPTIONS.map((language) => (
                       <option key={language.value} value={language.value}>
                         {language.label}
@@ -287,10 +378,10 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div>
+              <div className="settings-pref-grid mt-6">
+                <div className="settings-field-stack">
                   <label className="soft-label">Default engine</label>
-                  <select className="field" value={draft.defaultEngine} onChange={(event) => setDraft({ ...draft, defaultEngine: event.target.value as EngineProvider })}>
+                  <select className="field" value={draft.defaultEngine} onChange={(event) => updateTopLevelField('defaultEngine', event.target.value as EngineProvider)}>
                     {PROVIDER_ORDER.map((provider) => (
                       <option key={provider} value={provider}>
                         {ENGINE_META[provider].label}
@@ -298,46 +389,79 @@ export default function App() {
                     ))}
                   </select>
                 </div>
-                <div>
+
+                <div className="settings-field-stack">
                   <label className="soft-label">Theme</label>
-                  <select
-                    className="field"
-                    value={draft.theme}
-                    onChange={(event) => {
-                      const nextTheme = event.target.value as TranslationSettings['theme'];
-                      setDraft({ ...draft, theme: nextTheme });
-                      applyTheme(nextTheme);
-                    }}
-                  >
+                  <select className="field" value={draft.theme} onChange={(event) => handleThemeChange(event.target.value as TranslationSettings['theme'])}>
                     <option value="auto">Auto</option>
                     <option value="dark">Dark</option>
                     <option value="light">Light</option>
                   </select>
                 </div>
-                <div>
+
+                <div className="settings-field-stack">
                   <label className="soft-label">Silent translation</label>
-                  <select className="field" value={draft.silentMode} onChange={(event) => setDraft({ ...draft, silentMode: event.target.value as TranslationSettings['silentMode'] })}>
+                  <select className="field" value={draft.silentMode} onChange={(event) => updateTopLevelField('silentMode', event.target.value as TranslationSettings['silentMode'])}>
                     <option value="paragraph">Paragraph under cursor</option>
                     <option value="full-page">Full page</option>
                   </select>
                 </div>
-                <label className="glass-card flex items-center justify-between gap-4 rounded-[22px] border-white/5 bg-slate-950/25 px-4 py-3">
-                  <div>
-                    <div className="soft-label mb-1">Translation cache</div>
-                    <div className="text-sm text-slate-300">Use `chrome.storage.local` for cached responses.</div>
-                  </div>
-                  <input
-                    className="h-5 w-5 accent-teal-300"
-                    checked={draft.cacheEnabled}
-                    onChange={(event) => setDraft({ ...draft, cacheEnabled: event.target.checked })}
-                    type="checkbox"
-                  />
-                </label>
               </div>
-            </div>
 
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between gap-4">
+              <div className="settings-toggle-grid mt-6">
+                <div className="settings-toggle-card">
+                  <div className="min-w-0">
+                    <div className="soft-label mb-2">Translation cache</div>
+                    <div className="settings-toggle-card__title">Store repeated translations locally for faster follow-up requests.</div>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">
+                      Uses <span className="text-slate-100">chrome.storage.local</span> so repeated phrases and page fragments feel instant when the same
+                      engine, languages, and model are reused.
+                    </p>
+                  </div>
+
+                  <button
+                    aria-checked={draft.cacheEnabled}
+                    className="settings-toggle"
+                    data-checked={draft.cacheEnabled}
+                    onClick={handleCacheToggle}
+                    role="switch"
+                    type="button"
+                  >
+                    <span className="settings-toggle__track">
+                      <span className="settings-toggle__thumb" />
+                    </span>
+                    <span className="settings-toggle__label">{draft.cacheEnabled ? 'Enabled' : 'Disabled'}</span>
+                  </button>
+                </div>
+
+                <div className="settings-toggle-card">
+                  <div className="min-w-0">
+                    <div className="soft-label mb-2">Selection icon</div>
+                    <div className="settings-toggle-card__title">Show a small translate icon after selecting text on the page.</div>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">
+                      Keep this on for click-to-translate. Turn it off if you prefer using only the <span className="text-slate-100">Alt+T</span> shortcut.
+                    </p>
+                  </div>
+
+                  <button
+                    aria-checked={draft.showSelectionIcon}
+                    className="settings-toggle"
+                    data-checked={draft.showSelectionIcon}
+                    onClick={() => updateTopLevelField('showSelectionIcon', !draft.showSelectionIcon)}
+                    role="switch"
+                    type="button"
+                  >
+                    <span className="settings-toggle__track">
+                      <span className="settings-toggle__thumb" />
+                    </span>
+                    <span className="settings-toggle__label">{draft.showSelectionIcon ? 'Enabled' : 'Disabled'}</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="glass-card settings-panel px-5 py-6 md:px-6">
+              <div className="settings-panel__header">
                 <div>
                   <div className="soft-label">Hotkeys</div>
                   <h2 className="text-2xl font-semibold text-white">In-page shortcuts</h2>
@@ -345,64 +469,66 @@ export default function App() {
                 <div className="metric-chip">Sync + commands</div>
               </div>
 
-              <p className="mt-4 text-sm leading-6 text-slate-300">
-                These combinations are stored in sync storage and used by the content script listener. Manifest command defaults are also declared,
-                so browser-level shortcuts still work when configured on the extension shortcuts page.
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+                These combinations live in sync storage and are mirrored by the content script listener. Browser-level command defaults still exist,
+                so extension shortcut management keeps working when you rebind commands at the browser level.
               </p>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <HotkeyInput label="Selection / input" value={draft.hotkeys.selection} onChange={(value) => updateHotkey('selection', value)} />
-                <HotkeyInput label="Silent translate" value={draft.hotkeys.silent} onChange={(value) => updateHotkey('silent', value)} />
-                <HotkeyInput label="Full page toggle" value={draft.hotkeys.page} onChange={(value) => updateHotkey('page', value)} />
-                <HotkeyInput label="Restore original" value={draft.hotkeys.restore} onChange={(value) => updateHotkey('restore', value)} />
+              <div className="settings-hotkey-grid mt-6">
+                <HotkeyInput field="selection" label="Selection / input" onChange={updateHotkey} value={draft.hotkeys.selection} />
+                <HotkeyInput field="silent" label="Silent translate" onChange={updateHotkey} value={draft.hotkeys.silent} />
+                <HotkeyInput field="page" label="Full page toggle" onChange={updateHotkey} value={draft.hotkeys.page} />
+                <HotkeyInput field="restore" label="Restore original" onChange={updateHotkey} value={draft.hotkeys.restore} />
               </div>
-            </div>
+            </section>
           </div>
 
-          <div className="glass-card p-6">
-            <div className="soft-label">Behavior summary</div>
-            <h2 className="text-2xl font-semibold text-white">What ships by default</h2>
-            <div className="mt-5 space-y-4 text-sm leading-6 text-slate-300">
-              <p>
-                <span className="font-semibold text-teal-200">Alt+T</span> translates the current selection or the focused input/textarea in-place.
-              </p>
-              <p>
-                <span className="font-semibold text-teal-200">Alt+Q</span> runs silent translation using either paragraph-under-cursor mode or full-page mode.
-              </p>
-              <p>
-                <span className="font-semibold text-teal-200">Alt+W</span> toggles a full DOM walk translation with a floating translation bar.
-              </p>
-              <p>
-                <span className="font-semibold text-teal-200">Alt+R</span> restores the original page instantly.
-              </p>
-              <p>
-                History and translation cache stay in <span className="text-white">chrome.storage.local</span>, while settings and credentials stay in
-                <span className="text-white"> chrome.storage.sync</span>.
-              </p>
-            </div>
-          </div>
+          <aside className="settings-aside">
+            <section className="glass-card settings-aside-card px-5 py-6 md:px-6">
+              <div className="soft-label">Behavior summary</div>
+              <h2 className="text-2xl font-semibold text-white">What ships by default</h2>
+
+              <div className="mt-6 space-y-4">
+                {behaviorNotes.map((note) => (
+                  <div key={note.hotkey} className="settings-note">
+                    <div className="settings-note__key">{note.hotkey}</div>
+                    <p className="text-sm leading-7 text-slate-300">{note.text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="settings-storage-card mt-6">
+                <div className="soft-label mb-2">Storage model</div>
+                <p className="text-sm leading-7 text-slate-300">
+                  History and cache stay in <span className="text-white">chrome.storage.local</span>. Settings, credentials, and hotkeys stay in
+                  <span className="text-white"> chrome.storage.sync</span>.
+                </p>
+              </div>
+            </section>
+          </aside>
         </section>
 
         {(['standard', 'ai'] as EngineCategory[]).map((category) => (
           <section key={category} className="space-y-4">
-            <div className="flex items-end justify-between gap-4">
+            <div className="settings-panel__header">
               <div>
                 <div className="soft-label">{category}</div>
-                <h2 className="text-2xl font-semibold text-white">{category === 'standard' ? 'Standard translation engines' : 'AI translation engines'}</h2>
+                <h2 className="text-2xl font-semibold text-white">{sectionLabels[category]}</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{sectionDescriptions[category]}</p>
               </div>
               <div className="metric-chip">{groupedProviders[category].length} providers</div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="settings-provider-grid">
               {groupedProviders[category].map((provider) => (
-                <ProviderCard key={provider} provider={provider} settings={draft} onProviderChange={updateProvider} />
+                <ProviderCard config={draft.engines[provider]} key={provider} onProviderChange={updateProvider} provider={provider} />
               ))}
             </div>
           </section>
         ))}
 
-        <footer className="pb-6 text-sm text-slate-400">
-          Current default engine: <span className="text-slate-100">{ENGINE_META[(settings ?? draft).defaultEngine].label}</span>
+        <footer className="pb-8 text-sm text-slate-400">
+          Current default engine: <span className="text-slate-100">{currentEngineLabel}</span>
         </footer>
       </div>
     </main>

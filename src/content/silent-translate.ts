@@ -40,7 +40,11 @@ export class SilentTranslator {
       return;
     }
 
-    await this.pageTranslator.translateElement(paragraph);
+    const translated = await this.pageTranslator.translateElement(paragraph);
+    if (!translated) {
+      return;
+    }
+
     this.pageTranslator.highlightElement(paragraph);
     this.activeParagraph = paragraph;
   }

@@ -14,6 +14,7 @@ import type {
   CacheEntry,
   CommandName,
   ContentMessage,
+  EngineConfig,
   EngineProvider,
   RuntimeMessage,
   TranslateBatchPayload,
@@ -21,7 +22,7 @@ import type {
   TranslatePayload,
   TranslateResponse,
 } from '../types';
-import { BATCH_SIZE, RATE_LIMIT_MS } from '../utils/constants';
+import { BATCH_SIZE, ENGINE_META, RATE_LIMIT_MS } from '../utils/constants';
 
 const MENU_TRANSLATE_SELECTION = 'smart-translator:translate-selection';
 const MENU_TRANSLATE_PAGE = 'smart-translator:translate-page';
@@ -49,6 +50,33 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) {
+    return labels[0] ?? '';
+  }
+
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
+function assertEngineConfigured(provider: EngineProvider, config: EngineConfig): void {
+  const meta = ENGINE_META[provider];
+  const missing: string[] = [];
+
+  if (meta.requiresApiKey && !config.apiKey?.trim()) {
+    missing.push('API key');
+  }
+
+  if (meta.requiresRegion && !config.region?.trim()) {
+    missing.push('Azure region');
+  }
+
+  if (!missing.length) {
+    return;
+  }
+
+  throw new Error(`${meta.label} is not configured yet. Add ${joinLabels(missing)} in Settings, then try again.`);
+}
+
 async function withRateLimit<T>(provider: EngineProvider, task: () => Promise<T>): Promise<T> {
   const previous = engineQueues.get(provider) ?? Promise.resolve();
   const run = previous.catch(() => undefined).then(async () => {
@@ -72,6 +100,7 @@ async function translateMany(payload: TranslateBatchPayload): Promise<TranslateB
   const settings = await getSettings();
   const provider = payload.engine ?? settings.defaultEngine;
   const config = settings.engines[provider];
+  assertEngineConfigured(provider, config);
   const engine = getEngine(provider);
   const texts = payload.texts.filter((text) => text.trim().length > 0);
 

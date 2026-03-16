@@ -38,6 +38,7 @@ export interface TranslationSettings {
   defaultEngine: EngineProvider;
   theme: ThemeMode;
   cacheEnabled: boolean;
+  showSelectionIcon: boolean;
   silentMode: SilentMode;
   hotkeys: HotkeyConfig;
   engines: EngineSettings;
