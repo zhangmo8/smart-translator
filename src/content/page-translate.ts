@@ -24,6 +24,10 @@ export class PageTranslator {
   }
 
   async togglePageTranslation(showBar = true): Promise<void> {
+    if (!showBar) {
+      this.removeBar();
+    }
+
     if (this.translated) {
       this.restoreOriginalPage(true);
       return;
@@ -35,36 +39,52 @@ export class PageTranslator {
   async translatePage(showBar = true): Promise<boolean> {
     if (showBar) {
       this.ensureBar();
+    } else {
+      this.removeBar();
     }
 
     const nodes = this.collectTextNodes(document.body);
     if (!nodes.length) {
-      this.setStatus('Nothing translatable found on this page.');
+      if (showBar) {
+        this.setStatus('Nothing translatable found on this page.');
+      }
       return false;
     }
 
-    this.setStatus(`Scanning ${nodes.length} text fragments...`);
+    if (showBar) {
+      this.setStatus(`Scanning ${nodes.length} text fragments...`);
+    }
     try {
       await this.translateNodes(nodes, (done, total) => {
-        this.setStatus(`Translated ${done} / ${total} fragments`);
+        if (showBar) {
+          this.setStatus(`Translated ${done} / ${total} fragments`);
+        }
       });
     } catch (error: unknown) {
       this.translated = false;
       this.showingOriginal = false;
-      this.ensureBar();
-      this.updateBarButtons();
-      this.setStatus(this.formatError(error), 'error');
+      if (showBar) {
+        this.ensureBar();
+        this.updateBarButtons();
+        this.setStatus(this.formatError(error), 'error');
+      }
       return false;
     }
 
     this.translated = true;
     this.showingOriginal = false;
     this.updateBarButtons();
-    this.setStatus('Page translated. Toggle original anytime.', 'success');
+    if (showBar) {
+      this.setStatus('Page translated. Toggle original anytime.', 'success');
+    }
     return true;
   }
 
-  async translateElement(element: HTMLElement): Promise<boolean> {
+  async translateElement(element: HTMLElement, showBar = true): Promise<boolean> {
+    if (!showBar) {
+      this.removeBar();
+    }
+
     const nodes = this.collectTextNodes(element);
     if (!nodes.length) {
       return false;
@@ -74,13 +94,17 @@ export class PageTranslator {
       await this.translateNodes(nodes);
       this.translated = true;
       this.showingOriginal = false;
-      this.ensureBar();
       this.updateBarButtons();
-      this.setStatus('Block translated. Press the shortcut again to restore it.', 'success');
+      if (showBar) {
+        this.ensureBar();
+        this.setStatus('Block translated. Press the shortcut again to restore it.', 'success');
+      }
       return true;
     } catch (error: unknown) {
-      this.ensureBar();
-      this.setStatus(this.formatError(error), 'error');
+      if (showBar) {
+        this.ensureBar();
+        this.setStatus(this.formatError(error), 'error');
+      }
       return false;
     }
   }

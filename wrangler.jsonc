@@ -1,0 +1,8 @@
+{
+  "name": "smart-translator-docs",
+  "assets": {
+    "directory": "docs"
+  },
+  "compatibility_date": "2026-03-16",
+  "send_metrics": false
+}

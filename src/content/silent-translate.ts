@@ -24,7 +24,7 @@ export class SilentTranslator {
   async trigger(): Promise<void> {
     const settings = await this.getSettings();
     if (settings.silentMode === 'full-page') {
-      await this.pageTranslator.togglePageTranslation(true);
+      await this.pageTranslator.togglePageTranslation(false);
       return;
     }
 
@@ -40,7 +40,7 @@ export class SilentTranslator {
       return;
     }
 
-    const translated = await this.pageTranslator.translateElement(paragraph);
+    const translated = await this.pageTranslator.translateElement(paragraph, false);
     if (!translated) {
       return;
     }

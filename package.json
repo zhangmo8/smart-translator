@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:firefox": "vite build --mode firefox",
+    "deploy:docs": "wrangler deploy",
+    "preview:docs": "wrangler dev",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },
