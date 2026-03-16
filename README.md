@@ -38,7 +38,7 @@ Each AI provider supports a custom model name and system prompt. Standard provid
 
 - Source language: `Auto-detect`
 - Target language: browser UI language (`navigator.language` / `chrome.i18n.getUILanguage()`)
-- Default engine: `LibreTranslate`
+- Default engine: `Microsoft Azure Translator`
 - Cache: enabled
 - Silent mode: `Paragraph under cursor`
 
@@ -181,4 +181,3 @@ Open the extension popup to translate ad hoc text, switch between standard vs AI
 - `npm run typecheck` runs `tsc --noEmit`
 - `npm run build` creates the production Chrome/Edge package in `dist/`
 - `npm run build:firefox` creates a Firefox-targeted package in `dist-firefox/`
-

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Translator Support</title>
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="128" height="128" rx="32" fill="#08111E"></rect>
+            <rect x="10" y="10" width="108" height="108" rx="26" fill="url(#paint0_linear)" fill-opacity="0.08" stroke="url(#paint1_linear)" stroke-opacity="0.24"></rect>
+            <path d="M29 37.5C29 31.1487 34.1487 26 40.5 26H62.5C68.8513 26 74 31.1487 74 37.5V58.5C74 64.8513 68.8513 70 62.5 70H56L45.5 82V70H40.5C34.1487 70 29 64.8513 29 58.5V37.5Z" fill="#F5F3EF"></path>
+            <path d="M62 89.5C62 85.3579 65.3579 82 69.5 82H90C94.1421 82 97.5 78.6421 97.5 74.5V54C97.5 49.8579 94.1421 46.5 90 46.5H84.5L94 35V46.5H90C96.3513 46.5 101.5 51.6487 101.5 58V78.5C101.5 84.8513 96.3513 90 90 90H74L62 102V89.5Z" fill="#A78BFA"></path>
+            <path d="M42 45H60" stroke="#08111E" stroke-width="5.5" stroke-linecap="round"></path>
+            <path d="M42 56H52" stroke="#08111E" stroke-width="5.5" stroke-linecap="round"></path>
+            <path d="M71 63.5H88" stroke="#08111E" stroke-width="5.5" stroke-linecap="round"></path>
+            <path d="M71 74.5H83" stroke="#08111E" stroke-width="5.5" stroke-linecap="round"></path>
+            <circle cx="93" cy="35" r="10" fill="#5EEAD4"></circle>
+            <path d="M91.5 31.5L93.8 35.9L98.7 36.6L95.1 40.1L95.9 45L91.5 42.7L87.1 45L87.9 40.1L84.3 36.6L89.2 35.9L91.5 31.5Z" fill="#08111E"></path>
+            <defs>
+              <linearGradient id="paint0_linear" x1="18" y1="18" x2="110" y2="110" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#5EEAD4"></stop>
+                <stop offset="1" stop-color="#A78BFA"></stop>
+              </linearGradient>
+              <linearGradient id="paint1_linear" x1="16" y1="18" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#5EEAD4"></stop>
+                <stop offset="1" stop-color="#F59E0B"></stop>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="brand-meta">
+            <div class="brand-title">Smart Translator</div>
+            <div class="brand-copy">Support</div>
+          </div>
+        </div>
+
+        <h1 class="hero-title">Support for translation workflows inside the browser.</h1>
+        <p class="hero-copy">
+          Smart Translator helps users translate selected text, focused inputs, and full pages with the provider they choose. This page can be used as the public support URL for Chrome Web Store submission.
+        </p>
+        <div class="hero-pills">
+          <div class="pill">Selection translate</div>
+          <div class="pill">Popup quick translate</div>
+          <div class="pill">Page translation</div>
+        </div>
+      </section>
+
+      <div class="section-grid">
+        <section class="section-card">
+          <h2>Common Questions</h2>
+          <h3>How the extension works</h3>
+          <div class="table">
+            <div class="row">
+              <strong>How do I translate selected text?</strong>
+              <span>Select text on a page and use the on-page translate action or the configured `Alt+T` shortcut.</span>
+            </div>
+            <div class="row">
+              <strong>How do I translate a whole page?</strong>
+              <span>Use the popup, context menu, or `Alt+W` shortcut to run page translation. Use restore to revert the original text.</span>
+            </div>
+            <div class="row">
+              <strong>Where do I set my API key?</strong>
+              <span>Open the extension options page and enter your provider settings there. Different providers require different fields.</span>
+            </div>
+            <div class="row">
+              <strong>Why is translation failing?</strong>
+              <span>Check that your selected provider is configured correctly, the API key is valid, and any required region or endpoint field is filled in.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <h2>Supported Providers</h2>
+          <h3>Standard and AI translation engines</h3>
+          <div class="two-col">
+            <div class="notice">
+              <strong>Standard</strong>
+              <span>Microsoft Azure Translator, DeepL, Google Cloud Translation, and LibreTranslate-compatible endpoints.</span>
+            </div>
+            <div class="notice">
+              <strong>AI</strong>
+              <span>OpenAI, Claude, Gemini, Doubao, and DeepSeek for promptable translation workflows.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <h2>Privacy</h2>
+          <h3>Where to read more</h3>
+          <p>
+            Smart Translator only sends text to the provider selected by the user when the user initiates a translation request. Review the privacy policy here:
+            <a href="./privacy-policy.html" style="color: var(--teal); text-decoration: none;">Privacy Policy</a>
+          </p>
+        </section>
+
+        <section class="section-card">
+          <h2>Contact</h2>
+          <h3>Before publishing</h3>
+          <p>
+            Replace this placeholder with your actual support email or support form URL before submission:
+            <strong style="color: var(--heading);">YOUR_SUPPORT_EMAIL_OR_URL</strong>
+          </p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
