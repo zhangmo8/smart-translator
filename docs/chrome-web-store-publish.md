@@ -5,6 +5,7 @@
 - Upload ZIP: `release/smart-translator-chrome-web-store.zip`
 - Build output: `dist/`
 - Promo tile upload folder: `release/webstore-assets/`
+- One-command pack script: `npm run package:chrome`
 - Recommended promo files:
   - `release/webstore-assets/small-promo-tile-440x280.jpg`
   - `release/webstore-assets/top-promo-tile-1400x560.jpg`
@@ -175,10 +176,11 @@ Typical declarations:
 
 ## Recommended publish flow
 
-1. Register the developer account and enable 2-Step Verification.
-2. Upload `release/smart-translator-chrome-web-store.zip`.
-3. Fill in the single purpose field with the text above.
-4. Complete the listing with screenshots and promo tile.
-5. Add a public privacy policy URL that matches actual extension behavior.
-6. Double-check that the privacy tab answers match the code and the privacy policy.
-7. Submit for review.
+1. Run `npm run package:chrome`.
+2. Register the developer account and enable 2-Step Verification.
+3. Upload `release/smart-translator-chrome-web-store.zip`.
+4. Fill in the single purpose field with the text above.
+5. Complete the listing with screenshots and promo tile.
+6. Add a public privacy policy URL that matches actual extension behavior.
+7. Double-check that the privacy tab answers match the code and the privacy policy.
+8. Submit for review.
