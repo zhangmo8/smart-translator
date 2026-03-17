@@ -96,6 +96,7 @@ export const DEFAULT_SYSTEM_PROMPT =
 
 export const HISTORY_LIMIT = 10;
 export const CACHE_LIMIT = 300;
+export const TRANSLATION_CACHE_VERSION = '2026-03-17-2';
 
 export const RATE_LIMIT_MS: Record<EngineProvider, number> = {
   google: 180,

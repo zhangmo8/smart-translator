@@ -148,6 +148,14 @@ async function translateMany(payload: TranslateBatchPayload): Promise<TranslateB
       }),
     );
 
+    if (response.translations.length !== workChunk.length) {
+      throw new Error(
+        `${ENGINE_META[provider].label} returned ${response.translations.length} result${response.translations.length === 1 ? '' : 's'} for ${
+          workChunk.length
+        } text fragment${workChunk.length === 1 ? '' : 's'}.`,
+      );
+    }
+
     response.translations.forEach((translation, index) => {
       const item = workChunk[index];
       item.indexes.forEach((resultIndex) => {
@@ -164,6 +172,19 @@ async function translateMany(payload: TranslateBatchPayload): Promise<TranslateB
     });
 
     detectedSourceLanguage ||= response.detectedSourceLanguage || '';
+  }
+
+  let missingCount = 0;
+  for (let index = 0; index < results.length; index += 1) {
+    if (typeof results[index] !== 'string') {
+      missingCount += 1;
+    }
+  }
+
+  if (missingCount > 0) {
+    throw new Error(
+      `${ENGINE_META[provider].label} did not return ${missingCount} translated fragment${missingCount === 1 ? '' : 's'}. The page was left unchanged.`,
+    );
   }
 
   if (settings.cacheEnabled && cacheEntries.length > 0) {

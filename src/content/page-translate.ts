@@ -5,6 +5,14 @@ interface NodeRecord {
   translated: string;
 }
 
+interface TranslationApplyStats {
+  totalNodes: number;
+  appliedCount: number;
+  detachedCount: number;
+  unchangedCount: number;
+  detectedSourceLanguage?: string;
+}
+
 type SettingsGetter = () => Promise<TranslationSettings>;
 
 const BLOCK_TAGS = new Set(['ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DD', 'DIV', 'DT', 'FIGCAPTION', 'FOOTER', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEADER', 'LI', 'MAIN', 'NAV', 'P', 'SECTION', 'TD', 'TH']);
@@ -14,6 +22,7 @@ export class PageTranslator {
   private bar: HTMLDivElement | null = null;
   private statusLabel: HTMLDivElement | null = null;
   private toggleOriginalButton: HTMLButtonElement | null = null;
+  private statusHideTimer: number | null = null;
   private translated = false;
   private showingOriginal = false;
 
@@ -45,17 +54,17 @@ export class PageTranslator {
 
     const nodes = this.collectTextNodes(document.body);
     if (!nodes.length) {
-      if (showBar) {
-        this.setStatus('Nothing translatable found on this page.');
-      }
+      this.reportStatus(showBar, 'Nothing translatable found on this page.');
       return false;
     }
 
     if (showBar) {
       this.setStatus(`Scanning ${nodes.length} text fragments...`);
     }
+
+    let stats: TranslationApplyStats;
     try {
-      await this.translateNodes(nodes, (done, total) => {
+      stats = await this.translateNodes(nodes, (done, total) => {
         if (showBar) {
           this.setStatus(`Translated ${done} / ${total} fragments`);
         }
@@ -63,19 +72,24 @@ export class PageTranslator {
     } catch (error: unknown) {
       this.translated = false;
       this.showingOriginal = false;
-      if (showBar) {
-        this.ensureBar();
-        this.updateBarButtons();
-        this.setStatus(this.formatError(error), 'error');
-      }
+      this.updateBarButtons();
+      this.reportStatus(showBar, this.formatError(error), 'error');
       return false;
     }
 
-    this.translated = true;
+    this.translated = this.records.size > 0;
     this.showingOriginal = false;
     this.updateBarButtons();
+    if (!stats.appliedCount) {
+      this.reportStatus(showBar, this.formatNoVisibleChangeMessage('page', stats), 'error');
+      return false;
+    }
+
     if (showBar) {
-      this.setStatus('Page translated. Toggle original anytime.', 'success');
+      const partialStatus = stats.detachedCount
+        ? `Page translated with ${stats.appliedCount} updated fragments. ${stats.detachedCount} fragment${stats.detachedCount === 1 ? '' : 's'} changed before write-back.`
+        : 'Page translated. Toggle original anytime.';
+      this.setStatus(partialStatus, 'success');
     }
     return true;
   }
@@ -87,24 +101,32 @@ export class PageTranslator {
 
     const nodes = this.collectTextNodes(element);
     if (!nodes.length) {
+      this.reportStatus(showBar, 'Nothing translatable found in the current block.');
       return false;
     }
 
+    let stats: TranslationApplyStats;
     try {
-      await this.translateNodes(nodes);
-      this.translated = true;
+      stats = await this.translateNodes(nodes);
+      this.translated = this.records.size > 0;
       this.showingOriginal = false;
       this.updateBarButtons();
+
+      if (!stats.appliedCount) {
+        this.reportStatus(showBar, this.formatNoVisibleChangeMessage('block', stats), 'error');
+        return false;
+      }
+
       if (showBar) {
         this.ensureBar();
-        this.setStatus('Block translated. Press the shortcut again to restore it.', 'success');
+        const partialStatus = stats.detachedCount
+          ? `Block translated, but ${stats.detachedCount} text fragment${stats.detachedCount === 1 ? '' : 's'} changed before write-back.`
+          : 'Block translated. Press the shortcut again to restore it.';
+        this.setStatus(partialStatus, 'success');
       }
       return true;
     } catch (error: unknown) {
-      if (showBar) {
-        this.ensureBar();
-        this.setStatus(this.formatError(error), 'error');
-      }
+      this.reportStatus(showBar, this.formatError(error), 'error');
       return false;
     }
   }
@@ -198,11 +220,20 @@ export class PageTranslator {
     return null;
   }
 
-  private async translateNodes(nodes: Text[], onProgress?: (done: number, total: number) => void): Promise<void> {
+  notifyTransient(text: string, tone: 'default' | 'success' | 'error' = 'default'): void {
+    this.showTransientStatus(text, tone);
+  }
+
+  private async translateNodes(nodes: Text[], onProgress?: (done: number, total: number) => void): Promise<TranslationApplyStats> {
     const settings = await this.getSettings();
     const texts = nodes.map((node) => node.nodeValue ?? '').filter((text) => text.trim().length > 0);
     if (!texts.length) {
-      return;
+      return {
+        totalNodes: 0,
+        appliedCount: 0,
+        detachedCount: 0,
+        unchangedCount: 0,
+      };
     }
 
     const chunkSize = settings.defaultEngine === 'libretranslate' ? 8 : 24;
@@ -225,21 +256,66 @@ export class PageTranslator {
         throw new Error(response.error);
       }
 
+      if (response.translations.length !== slice.length) {
+        throw new Error(
+          `The ${settings.defaultEngine} engine returned ${response.translations.length} result${response.translations.length === 1 ? '' : 's'} for ${slice.length} text fragment${
+            slice.length === 1 ? '' : 's'
+          }. Nothing was written to the page.`,
+        );
+      }
+
       translatedTexts.push(...response.translations);
       detectedSourceLanguage ||= response.detectedSourceLanguage || '';
       onProgress?.(Math.min(index + slice.length, texts.length), texts.length);
     }
 
+    if (translatedTexts.length !== nodes.length) {
+      throw new Error(
+        `Received ${translatedTexts.length} translated fragment${translatedTexts.length === 1 ? '' : 's'} for ${nodes.length} DOM text node${
+          nodes.length === 1 ? '' : 's'
+        }. The page was left unchanged.`,
+      );
+    }
+
+    let appliedCount = 0;
+    let detachedCount = 0;
+    let unchangedCount = 0;
+
     nodes.forEach((node, index) => {
-      const original = node.nodeValue ?? '';
-      const translated = translatedTexts[index] ?? original;
+      const currentText = node.nodeValue ?? '';
+      const translated = translatedTexts[index];
+      if (typeof translated !== 'string') {
+        throw new Error(`Missing translated text for fragment ${index + 1}.`);
+      }
+
+      if (!node.isConnected) {
+        detachedCount += 1;
+        return;
+      }
+
+      if (translated === currentText) {
+        unchangedCount += 1;
+        return;
+      }
+
+      const existing = this.records.get(node);
+      const original = existing?.original ?? currentText;
       this.records.set(node, { original, translated });
       node.nodeValue = translated;
+      appliedCount += 1;
     });
 
     if (detectedSourceLanguage) {
       this.setStatus(`Detected ${detectedSourceLanguage} → ${settings.targetLanguage}`);
     }
+
+    return {
+      totalNodes: nodes.length,
+      appliedCount,
+      detachedCount,
+      unchangedCount,
+      detectedSourceLanguage: detectedSourceLanguage || undefined,
+    };
   }
 
   private collectTextNodes(root: ParentNode): Text[] {
@@ -292,7 +368,9 @@ export class PageTranslator {
   }
 
   private ensureBar(): void {
+    this.clearStatusHideTimer();
     if (this.bar) {
+      delete this.bar.dataset.transient;
       return;
     }
 
@@ -351,6 +429,7 @@ export class PageTranslator {
   }
 
   private removeBar(): void {
+    this.clearStatusHideTimer();
     this.bar?.remove();
     this.bar = null;
     this.statusLabel = null;
@@ -372,6 +451,52 @@ export class PageTranslator {
       this.toggleOriginalButton.textContent = this.showingOriginal ? 'Show translation' : 'Show original';
       this.toggleOriginalButton.disabled = !this.translated;
     }
+  }
+
+  private reportStatus(showBar: boolean, text: string, tone: 'default' | 'success' | 'error' = 'default'): void {
+    if (showBar) {
+      this.ensureBar();
+      this.setStatus(text, tone);
+      return;
+    }
+
+    this.showTransientStatus(text, tone);
+  }
+
+  private showTransientStatus(text: string, tone: 'default' | 'success' | 'error' = 'default', duration = tone === 'error' ? 5200 : 3200): void {
+    this.ensureBar();
+    if (!this.bar) {
+      return;
+    }
+
+    this.bar.dataset.transient = 'true';
+    this.setStatus(text, tone);
+    this.clearStatusHideTimer();
+    this.statusHideTimer = window.setTimeout(() => {
+      if (this.bar?.dataset.transient === 'true') {
+        this.removeBar();
+      }
+    }, duration);
+  }
+
+  private clearStatusHideTimer(): void {
+    if (this.statusHideTimer !== null) {
+      window.clearTimeout(this.statusHideTimer);
+      this.statusHideTimer = null;
+    }
+  }
+
+  private formatNoVisibleChangeMessage(scope: 'page' | 'block', stats: TranslationApplyStats): string {
+    const subject = scope === 'page' ? 'page' : 'block';
+    if (stats.detachedCount === stats.totalNodes && stats.totalNodes > 0) {
+      return `Translation finished, but the ${subject} updated before the result could be written to the DOM. Try again once it settles.`;
+    }
+
+    if (stats.unchangedCount === stats.totalNodes && stats.totalNodes > 0) {
+      return `Translation finished, but the translated ${scope === 'page' ? 'page text' : 'block text'} matched the current DOM, so nothing changed visibly.`;
+    }
+
+    return `Translation finished, but no visible DOM update was applied to this ${subject}.`;
   }
 
   private formatError(error: unknown): string {

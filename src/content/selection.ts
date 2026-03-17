@@ -5,9 +5,10 @@ type SettingsGetter = () => Promise<TranslationSettings>;
 
 interface TooltipAnchor {
   left: number;
+  right: number;
   top: number;
   bottom: number;
-  width: number;
+  centerX: number;
 }
 
 export class SelectionTranslator {
@@ -167,13 +168,12 @@ export class SelectionTranslator {
       return;
     }
 
-    const rect = selection.getRangeAt(0).getBoundingClientRect();
-    this.anchor = {
-      left: rect.left + window.scrollX,
-      top: rect.top + window.scrollY,
-      bottom: rect.bottom + window.scrollY,
-      width: rect.width,
-    };
+    this.anchor = this.captureSelectionAnchor(selection);
+    if (!this.anchor) {
+      this.handleEmptySelection();
+      return;
+    }
+
     this.activeSelectionText = text;
     this.isPinned = false;
     this.clearHideTimer();
@@ -218,11 +218,33 @@ export class SelectionTranslator {
 
   private captureElementAnchor(element: HTMLElement): void {
     const rect = element.getBoundingClientRect();
-    this.anchor = {
-      left: rect.left + window.scrollX,
-      top: rect.top + window.scrollY,
-      bottom: rect.bottom + window.scrollY,
-      width: Math.max(rect.width, 160),
+    this.anchor = this.createAnchor(rect);
+  }
+
+  private captureSelectionAnchor(selection: Selection): TooltipAnchor | null {
+    if (selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const boundsRect = range.getBoundingClientRect();
+    const clientRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0);
+    const focusRect = clientRects.at(-1) ?? boundsRect;
+
+    if (!focusRect.width && !focusRect.height) {
+      return null;
+    }
+
+    return this.createAnchor(boundsRect, focusRect);
+  }
+
+  private createAnchor(boundsRect: DOMRect | DOMRectReadOnly, focusRect: DOMRect | DOMRectReadOnly = boundsRect): TooltipAnchor {
+    return {
+      left: boundsRect.left + window.scrollX,
+      right: focusRect.right + window.scrollX,
+      top: focusRect.top + window.scrollY,
+      bottom: focusRect.bottom + window.scrollY,
+      centerX: boundsRect.left + boundsRect.width / 2 + window.scrollX,
     };
   }
 
@@ -231,6 +253,7 @@ export class SelectionTranslator {
       return;
     }
 
+    const iconUrl = chrome.runtime.getURL('icons/icon-32.png');
     const tooltip = document.createElement('div');
     tooltip.className = 'smart-translator-tooltip';
     tooltip.setAttribute('data-smart-translator-ui', 'true');
@@ -239,7 +262,7 @@ export class SelectionTranslator {
     tooltip.dataset.tone = 'default';
     tooltip.innerHTML = `
       <button class="smart-translator-selection-trigger" type="button" data-role="trigger" aria-label="Translate selection">
-        <span class="smart-translator-selection-trigger__glyph">T</span>
+        <img class="smart-translator-selection-trigger__logo" src="${iconUrl}" alt="" draggable="false" />
       </button>
       <div class="smart-translator-tooltip__shell">
         <div class="smart-translator-tooltip__header">
@@ -321,17 +344,22 @@ export class SelectionTranslator {
     const tooltipWidth = tooltipRect.width || 360;
     const tooltipHeight = tooltipRect.height || 180;
     const viewportPadding = 12;
-    const minLeft = window.scrollX + viewportPadding;
-    const maxLeft = window.scrollX + window.innerWidth - tooltipWidth - viewportPadding;
+    const anchorLeft = this.anchor.left - window.scrollX;
+    const anchorRight = this.anchor.right - window.scrollX;
+    const anchorTop = this.anchor.top - window.scrollY;
+    const anchorBottom = this.anchor.bottom - window.scrollY;
+    const anchorCenterX = this.anchor.centerX - window.scrollX;
+    const minLeft = viewportPadding;
+    const maxLeft = window.innerWidth - tooltipWidth - viewportPadding;
     const isIconState = this.tooltip.dataset.state === 'icon';
     const rawLeft = isIconState
-      ? this.anchor.left + this.anchor.width - tooltipWidth * 0.55
-      : this.anchor.left + this.anchor.width / 2 - tooltipWidth / 2;
+      ? anchorRight - tooltipWidth / 2
+      : anchorCenterX - tooltipWidth / 2;
     const left = Math.min(Math.max(rawLeft, minLeft), Math.max(minLeft, maxLeft));
-    const prefersAbove = this.anchor.top - window.scrollY > tooltipHeight + 24;
-    const rawTop = prefersAbove ? this.anchor.top - tooltipHeight - (isIconState ? 10 : 16) : this.anchor.bottom + (isIconState ? 8 : 16);
-    const minTop = window.scrollY + viewportPadding;
-    const maxTop = window.scrollY + window.innerHeight - tooltipHeight - viewportPadding;
+    const prefersAbove = anchorTop > tooltipHeight + 24;
+    const rawTop = prefersAbove ? anchorTop - tooltipHeight - (isIconState ? 10 : 16) : anchorBottom + (isIconState ? 8 : 16);
+    const minTop = viewportPadding;
+    const maxTop = window.innerHeight - tooltipHeight - viewportPadding;
     const top = Math.min(Math.max(rawTop, minTop), Math.max(minTop, maxTop));
     this.tooltip.style.top = `${top}px`;
     this.tooltip.style.left = `${left}px`;
@@ -398,8 +426,8 @@ export class SelectionTranslator {
     }
 
     if (!this.anchor && this.tooltip) {
-      this.tooltip.style.top = `${window.scrollY + 24}px`;
-      this.tooltip.style.left = `${window.scrollX + 24}px`;
+      this.tooltip.style.top = '24px';
+      this.tooltip.style.left = '24px';
     }
 
     this.scheduleReposition();

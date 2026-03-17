@@ -1,4 +1,4 @@
-import { CACHE_LIMIT, ENGINE_META, HISTORY_LIMIT } from '../utils/constants';
+import { CACHE_LIMIT, ENGINE_META, HISTORY_LIMIT, TRANSLATION_CACHE_VERSION } from '../utils/constants';
 import { getBrowserLanguage, normalizeLanguageCode } from '../utils/languages';
 import type { CacheEntry, EngineProvider, EngineSettings, HotkeyConfig, TranslationHistoryEntry, TranslationSettings } from '../types';
 
@@ -148,5 +148,5 @@ export async function clearCache(): Promise<void> {
 }
 
 export function buildCacheKey(engine: EngineProvider, sourceLanguage: string, targetLanguage: string, text: string, model?: string): string {
-  return [engine, sourceLanguage, targetLanguage, model ?? '', text].join('::');
+  return [TRANSLATION_CACHE_VERSION, engine, sourceLanguage, targetLanguage, model ?? '', text].join('::');
 }
