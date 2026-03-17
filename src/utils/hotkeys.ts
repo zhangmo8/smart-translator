@@ -1,3 +1,5 @@
+const MODIFIER_KEYS = ['Ctrl', 'Alt', 'Shift', 'Meta'] as const;
+
 export function normalizeHotkey(raw: string): string {
   if (!raw) {
     return '';
@@ -26,7 +28,7 @@ export function normalizeHotkey(raw: string): string {
     }
   });
 
-  const ordered = ['Ctrl', 'Alt', 'Shift', 'Meta'].filter((modifier) => modifiers.has(modifier));
+  const ordered = MODIFIER_KEYS.filter((modifier) => modifiers.has(modifier));
   return [...ordered, key].filter(Boolean).join('+');
 }
 

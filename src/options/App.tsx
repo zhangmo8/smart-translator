@@ -480,6 +480,11 @@ export default function App() {
                 <HotkeyInput field="page" label="Full page toggle" onChange={updateHotkey} value={draft.hotkeys.page} />
                 <HotkeyInput field="restore" label="Restore original" onChange={updateHotkey} value={draft.hotkeys.restore} />
               </div>
+
+              <p className="mt-4 text-sm leading-6 text-slate-400">
+                Reusing the same shortcut is allowed. In paragraph silent mode, the action now follows the paragraph under your cursor: a new block
+                translates, and the same translated block restores.
+              </p>
             </section>
           </div>
 

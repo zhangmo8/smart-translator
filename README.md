@@ -147,7 +147,7 @@ Press `Alt+Q`.
 - `Paragraph` mode translates the nearest block under the cursor and briefly highlights it
 - `Full page` mode runs the same translation flow as page translate without needing a click
 
-Pressing the shortcut again toggles the paragraph/full-page translation back off.
+In `Paragraph` mode, hovering a new block and pressing the shortcut keeps translating progressively. Pressing the shortcut again on the same translated block restores just that block.
 
 ### Popup translate
 

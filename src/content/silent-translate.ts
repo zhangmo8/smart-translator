@@ -6,7 +6,7 @@ type SettingsGetter = () => Promise<TranslationSettings>;
 
 export class SilentTranslator {
   private hoveredElement: Element | null = null;
-  private activeParagraph: HTMLElement | null = null;
+  private translatedParagraphs = new Set<HTMLElement>();
 
   constructor(
     private readonly getSettings: SettingsGetter,
@@ -28,15 +28,20 @@ export class SilentTranslator {
       return;
     }
 
-    if (this.activeParagraph?.isConnected) {
-      this.pageTranslator.restoreElement(this.activeParagraph);
-      this.pageTranslator.highlightElement(this.activeParagraph);
-      this.activeParagraph = null;
+    if (!this.pageTranslator.isTranslated() && this.translatedParagraphs.size) {
+      this.translatedParagraphs.clear();
+    }
+
+    this.pruneParagraphState();
+    const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
+    if (!paragraph) {
       return;
     }
 
-    const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
-    if (!paragraph) {
+    if (this.translatedParagraphs.has(paragraph)) {
+      this.pageTranslator.restoreElement(paragraph);
+      this.pageTranslator.highlightElement(paragraph);
+      this.translatedParagraphs.delete(paragraph);
       return;
     }
 
@@ -46,10 +51,18 @@ export class SilentTranslator {
     }
 
     this.pageTranslator.highlightElement(paragraph);
-    this.activeParagraph = paragraph;
+    this.translatedParagraphs.add(paragraph);
   }
 
   clearParagraphState(): void {
-    this.activeParagraph = null;
+    this.translatedParagraphs.clear();
+  }
+
+  private pruneParagraphState(): void {
+    this.translatedParagraphs.forEach((paragraph) => {
+      if (!paragraph.isConnected) {
+        this.translatedParagraphs.delete(paragraph);
+      }
+    });
   }
 }
