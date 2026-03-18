@@ -1,7 +1,29 @@
 import type { TranslateResponse, TranslationSettings } from '../types';
 import { isEditableElement } from '../utils/hotkeys';
+import { normalizeLanguageCode } from '../utils/languages';
 
 type SettingsGetter = () => Promise<TranslationSettings>;
+
+const SPEAK_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M5 9v6h4l5 4V5L9 9H5Z" fill="currentColor"></path>
+    <path d="M16.5 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+    <path d="M18.75 6.25a8 8 0 0 1 0 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+  </svg>
+`.trim();
+
+const STOP_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M7 7h10v10H7Z" fill="currentColor"></path>
+  </svg>
+`.trim();
+
+const COPY_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="9" y="9" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"></rect>
+    <path d="M15 7V6a2 2 0 0 0-2-2H6A2 2 0 0 0 4 6v7a2 2 0 0 0 2 2h1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+  </svg>
+`.trim();
 
 interface TooltipAnchor {
   left: number;
@@ -14,16 +36,27 @@ interface TooltipAnchor {
 export class SelectionTranslator {
   private tooltip: HTMLDivElement | null = null;
   private triggerButton: HTMLButtonElement | null = null;
+  private speakButton: HTMLButtonElement | null = null;
+  private copyButton: HTMLButtonElement | null = null;
   private titleNode: HTMLDivElement | null = null;
   private resultNode: HTMLDivElement | null = null;
+  private utilityStatusNode: HTMLDivElement | null = null;
   private translateButton: HTMLButtonElement | null = null;
   private settingsButton: HTMLButtonElement | null = null;
   private anchor: TooltipAnchor | null = null;
   private activeSelectionText = '';
+  private translatedText = '';
   private hideTimer: number | null = null;
+  private tooltipInteractionTimer: number | null = null;
+  private utilityStatusTimer: number | null = null;
   private isPointerInsideTooltip = false;
   private isPinned = false;
   private isTranslating = false;
+  private ignoreSelectionUpdates = false;
+  private isSpeaking = false;
+  private speechSessionToken = 0;
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private lastTargetLanguage = normalizeLanguageCode(navigator.language || 'en');
   private showSelectionIcon = true;
 
   constructor(private readonly getSettings: SettingsGetter) {}
@@ -41,6 +74,9 @@ export class SelectionTranslator {
     document.removeEventListener('scroll', this.repositionTooltip, true);
     document.removeEventListener('mousedown', this.handleDocumentMouseDown, true);
     this.clearHideTimer();
+    this.clearTooltipInteractionTimer();
+    this.clearUtilityStatusTimer();
+    this.stopSpeaking(true);
   }
 
   updateDisplaySettings(showSelectionIcon: boolean): void {
@@ -124,6 +160,11 @@ export class SelectionTranslator {
 
     try {
       const settings = await this.getSettings();
+      this.lastTargetLanguage =
+        settings.targetLanguage && settings.targetLanguage !== 'auto'
+          ? normalizeLanguageCode(settings.targetLanguage)
+          : this.lastTargetLanguage;
+
       const response = (await chrome.runtime.sendMessage({
         type: 'TRANSLATE_TEXT',
         payload: {
@@ -152,6 +193,10 @@ export class SelectionTranslator {
   };
 
   private handleSelectionChange = (): void => {
+    if (this.ignoreSelectionUpdates) {
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       this.handleEmptySelection();
@@ -189,11 +234,11 @@ export class SelectionTranslator {
 
   private handleDocumentMouseDown = (event: MouseEvent): void => {
     const target = event.target as Node | null;
-    if (target && this.tooltip?.contains(target)) {
+    if (!this.tooltip || (target && this.tooltip.contains(target))) {
       return;
     }
 
-    if (!window.getSelection()?.toString().trim()) {
+    if (!this.isTranslating) {
       this.hideTooltip();
     }
   };
@@ -203,7 +248,7 @@ export class SelectionTranslator {
   }
 
   private handleEmptySelection(): void {
-    if (this.isPointerInsideTooltip || this.isPinned || this.isTranslating || Boolean(this.activeSelectionText)) {
+    if (this.isPointerInsideTooltip || this.isPinned || this.isTranslating) {
       return;
     }
 
@@ -270,13 +315,22 @@ export class SelectionTranslator {
             <div class="smart-translator-tooltip__eyebrow">Selection translator</div>
             <div class="smart-translator-tooltip__title" data-role="title">Ready to translate</div>
           </div>
-          <button class="smart-translator-icon-button" type="button" data-role="close" aria-label="Close">x</button>
+          <div class="smart-translator-tooltip__header-actions">
+            <button class="smart-translator-icon-button smart-translator-tooltip__action" type="button" data-role="speak" aria-label="Read translation aloud" title="Read translation aloud">
+              ${SPEAK_ICON}
+            </button>
+            <button class="smart-translator-icon-button smart-translator-tooltip__action" type="button" data-role="copy" aria-label="Copy translation" title="Copy translation">
+              ${COPY_ICON}
+            </button>
+            <button class="smart-translator-icon-button" type="button" data-role="close" aria-label="Close" title="Close">x</button>
+          </div>
         </div>
         <div class="smart-translator-tooltip__body">
           <div class="smart-translator-tooltip__text" data-role="result">
             Keep the selection, then translate it inline.
           </div>
         </div>
+        <div class="smart-translator-tooltip__status" data-role="utility-status" aria-live="polite" hidden></div>
         <div class="smart-translator-tooltip__footer">
           <button class="smart-translator-button" type="button" data-role="translate">Translate selection</button>
           <button class="smart-translator-button smart-translator-button--ghost" type="button" data-role="settings" hidden>Open settings</button>
@@ -291,48 +345,64 @@ export class SelectionTranslator {
 
     tooltip.addEventListener('pointerleave', () => {
       this.isPointerInsideTooltip = false;
-      if (!this.getCurrentSelectionText() && !this.activeSelectionText && !this.isPinned && !this.isTranslating) {
+      if (!this.getCurrentSelectionText() && !this.isPinned && !this.isTranslating) {
         this.scheduleHide(120);
       }
     });
 
-    tooltip.addEventListener('mousedown', (event) => {
+    tooltip.addEventListener('pointerdown', (event) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest('button')) {
-        event.preventDefault();
-      }
-    });
-
-    tooltip.addEventListener('click', (event) => {
-      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-role]');
-      if (!target?.dataset.role) {
+      if (!target?.closest('button')) {
         return;
       }
 
-      if (target.dataset.role === 'trigger') {
-        void this.translateSelection(this.activeSelectionText);
-      }
-
-      if (target.dataset.role === 'translate') {
-        void this.translateSelection(this.activeSelectionText);
-      }
-
-      if (target.dataset.role === 'settings') {
-        void chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-      }
-
-      if (target.dataset.role === 'close') {
-        this.hideTooltip();
-      }
+      this.beginTooltipButtonInteraction();
+      event.preventDefault();
     });
 
     document.documentElement.appendChild(tooltip);
     this.tooltip = tooltip;
     this.triggerButton = tooltip.querySelector('[data-role="trigger"]');
+    this.speakButton = tooltip.querySelector('[data-role="speak"]');
+    this.copyButton = tooltip.querySelector('[data-role="copy"]');
     this.translateButton = tooltip.querySelector('[data-role="translate"]');
     this.settingsButton = tooltip.querySelector('[data-role="settings"]');
     this.titleNode = tooltip.querySelector('[data-role="title"]');
     this.resultNode = tooltip.querySelector('[data-role="result"]');
+    this.utilityStatusNode = tooltip.querySelector('[data-role="utility-status"]');
+    const closeButton = tooltip.querySelector<HTMLButtonElement>('[data-role="close"]');
+
+    this.triggerButton?.addEventListener('click', () => {
+      void this.translateSelection(this.activeSelectionText);
+      this.endTooltipButtonInteraction();
+    });
+
+    this.translateButton?.addEventListener('click', () => {
+      void this.translateSelection(this.activeSelectionText);
+      this.endTooltipButtonInteraction();
+    });
+
+    this.speakButton?.addEventListener('click', () => {
+      void this.toggleSpeechPlayback();
+      this.endTooltipButtonInteraction();
+    });
+
+    this.copyButton?.addEventListener('click', () => {
+      void this.copyTranslatedText();
+      this.endTooltipButtonInteraction();
+    });
+
+    this.settingsButton?.addEventListener('click', () => {
+      void chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+      this.endTooltipButtonInteraction();
+    });
+
+    closeButton?.addEventListener('click', () => {
+      this.hideTooltip();
+      this.endTooltipButtonInteraction();
+    });
+
+    this.updateUtilityButtons();
   }
 
   private repositionTooltip = (): void => {
@@ -371,6 +441,9 @@ export class SelectionTranslator {
       return;
     }
 
+    this.translatedText = '';
+    this.stopSpeaking(true);
+    this.clearUtilityStatus();
     this.tooltip.dataset.state = 'icon';
     this.tooltip.dataset.tone = 'default';
     this.titleNode.textContent = 'Selection ready';
@@ -381,6 +454,7 @@ export class SelectionTranslator {
     if (this.settingsButton) {
       this.settingsButton.hidden = true;
     }
+    this.updateUtilityButtons();
   }
 
   private showLoadingState(): void {
@@ -390,6 +464,9 @@ export class SelectionTranslator {
     }
 
     this.clearHideTimer();
+    this.translatedText = '';
+    this.stopSpeaking(true);
+    this.clearUtilityStatus();
     this.isPinned = true;
     this.isTranslating = true;
     this.tooltip.dataset.state = 'loading';
@@ -402,6 +479,7 @@ export class SelectionTranslator {
     if (this.settingsButton) {
       this.settingsButton.hidden = true;
     }
+    this.updateUtilityButtons();
     this.scheduleReposition();
   }
 
@@ -412,7 +490,10 @@ export class SelectionTranslator {
     }
 
     this.clearHideTimer();
+    this.stopSpeaking(true);
+    this.clearUtilityStatus();
     this.isPinned = true;
+    this.translatedText = isError ? '' : text;
     this.tooltip.dataset.state = isError ? 'error' : 'result';
     this.tooltip.dataset.tone = isError ? 'error' : 'success';
     this.titleNode.textContent = isError ? 'Translation needs attention' : 'Translation ready';
@@ -430,7 +511,283 @@ export class SelectionTranslator {
       this.tooltip.style.left = '24px';
     }
 
+    this.updateUtilityButtons();
     this.scheduleReposition();
+  }
+
+  private updateUtilityButtons(): void {
+    const hasResult = this.tooltip?.dataset.state === 'result' && Boolean(this.getResultText());
+    if (this.speakButton) {
+      const canSpeak = this.isSpeaking || hasResult;
+      this.speakButton.disabled = !canSpeak;
+      this.speakButton.dataset.state = this.isSpeaking ? 'active' : 'idle';
+      this.speakButton.innerHTML = this.isSpeaking ? STOP_ICON : SPEAK_ICON;
+      this.speakButton.setAttribute('aria-label', this.isSpeaking ? 'Stop reading aloud' : 'Read translation aloud');
+      this.speakButton.title = this.isSpeaking ? 'Stop reading aloud' : 'Read translation aloud';
+    }
+
+    if (this.copyButton) {
+      this.copyButton.disabled = !hasResult;
+      this.copyButton.innerHTML = COPY_ICON;
+      this.copyButton.setAttribute('aria-label', 'Copy translation');
+      this.copyButton.title = 'Copy translation';
+    }
+  }
+
+  private toggleSpeechPlayback = async (): Promise<void> => {
+    if (this.isSpeaking) {
+      this.stopSpeaking();
+      return;
+    }
+
+    if (this.tooltip?.dataset.state !== 'result') {
+      this.showUtilityStatus('No translated text to read yet.', true);
+      return;
+    }
+
+    const textToSpeak = this.getResultText();
+    if (!textToSpeak) {
+      this.showUtilityStatus('No translated text to read yet.', true);
+      return;
+    }
+
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      this.showUtilityStatus('Browser speech playback is not available on this page.', true);
+      return;
+    }
+
+    const speechSessionToken = this.speechSessionToken + 1;
+    this.speechSessionToken = speechSessionToken;
+    this.isSpeaking = true;
+    this.updateUtilityButtons();
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      const speechLanguage = this.getSpeechLanguage();
+      if (speechLanguage) {
+        utterance.lang = speechLanguage;
+      }
+      const voice = this.pickSpeechVoice(speechLanguage);
+      if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+      }
+
+      this.currentUtterance = utterance;
+
+      utterance.onstart = () => {
+        if (speechSessionToken !== this.speechSessionToken) {
+          return;
+        }
+
+        this.showUtilityStatus('Reading aloud.');
+      };
+
+      utterance.onend = () => {
+        if (speechSessionToken !== this.speechSessionToken) {
+          return;
+        }
+
+        this.currentUtterance = null;
+        this.isSpeaking = false;
+        this.updateUtilityButtons();
+        this.showUtilityStatus('Finished reading.');
+      };
+
+      utterance.onerror = () => {
+        if (speechSessionToken !== this.speechSessionToken) {
+          return;
+        }
+
+        this.currentUtterance = null;
+        this.isSpeaking = false;
+        this.updateUtilityButtons();
+        this.showUtilityStatus('Voice playback failed. Try another page or browser voice.', true);
+      };
+
+      window.speechSynthesis.cancel();
+      if (speechSessionToken !== this.speechSessionToken) {
+        return;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error: unknown) {
+      if (speechSessionToken !== this.speechSessionToken) {
+        return;
+      }
+
+      this.currentUtterance = null;
+      this.isSpeaking = false;
+      this.updateUtilityButtons();
+      this.showUtilityStatus(error instanceof Error ? error.message : 'Voice playback failed. Please try again.', true);
+    }
+  };
+
+  private stopSpeaking(silent = false): void {
+    this.speechSessionToken += 1;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    this.currentUtterance = null;
+    this.isSpeaking = false;
+    this.updateUtilityButtons();
+    if (!silent) {
+      this.showUtilityStatus('Reading stopped.');
+    }
+  }
+
+  private copyTranslatedText = async (): Promise<void> => {
+    if (this.tooltip?.dataset.state !== 'result') {
+      this.showUtilityStatus('No translated text to copy yet.', true);
+      return;
+    }
+
+    const textToCopy = this.getResultText();
+    if (!textToCopy) {
+      this.showUtilityStatus('No translated text to copy yet.', true);
+      return;
+    }
+
+    try {
+      await this.copyText(textToCopy);
+      this.showUtilityStatus('Copied to clipboard.');
+    } catch (error: unknown) {
+      this.showUtilityStatus(error instanceof Error ? error.message : 'Copy failed. Please try again.', true);
+    }
+  };
+
+  private copyText = async (text: string): Promise<void> => {
+    if (this.copyWithExecCommand(text)) {
+      return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    throw new Error('Copy failed. Clipboard access was rejected.');
+  };
+
+  private copyWithExecCommand(text: string): boolean {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', 'true');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      textarea.style.pointerEvents = 'none';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      document.documentElement.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      return copied;
+    } catch {
+      return false;
+    }
+  }
+
+  private getResultText(): string {
+    return this.translatedText || this.resultNode?.textContent?.trim() || '';
+  }
+
+  private beginTooltipButtonInteraction(): void {
+    this.ignoreSelectionUpdates = true;
+    this.clearTooltipInteractionTimer();
+    this.tooltipInteractionTimer = window.setTimeout(() => {
+      this.ignoreSelectionUpdates = false;
+      this.tooltipInteractionTimer = null;
+    }, 400);
+  }
+
+  private endTooltipButtonInteraction(): void {
+    this.clearTooltipInteractionTimer();
+    this.tooltipInteractionTimer = window.setTimeout(() => {
+      this.ignoreSelectionUpdates = false;
+      this.tooltipInteractionTimer = null;
+    }, 0);
+  }
+
+  private clearTooltipInteractionTimer(): void {
+    if (this.tooltipInteractionTimer !== null) {
+      window.clearTimeout(this.tooltipInteractionTimer);
+      this.tooltipInteractionTimer = null;
+    }
+  }
+
+  private getSpeechLanguage(): string | undefined {
+    if (this.lastTargetLanguage && this.lastTargetLanguage !== 'auto') {
+      return this.lastTargetLanguage;
+    }
+
+    const pageLanguage = document.documentElement.lang.trim();
+    return pageLanguage ? normalizeLanguageCode(pageLanguage) : normalizeLanguageCode(navigator.language || 'en');
+  }
+
+  private pickSpeechVoice(language?: string): SpeechSynthesisVoice | undefined {
+    if (!('speechSynthesis' in window)) {
+      return undefined;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) {
+      return undefined;
+    }
+
+    const preferredLanguage = normalizeLanguageCode(language || this.lastTargetLanguage || navigator.language || 'en');
+    const preferredBaseLanguage = preferredLanguage.split('-')[0];
+    const browserLanguage = normalizeLanguageCode(navigator.language || 'en');
+    const browserBaseLanguage = browserLanguage.split('-')[0];
+    const normalizedVoiceLanguage = (voice: SpeechSynthesisVoice) => normalizeLanguageCode(voice.lang || '');
+
+    return (
+      voices.find((voice) => normalizedVoiceLanguage(voice) === preferredLanguage && voice.default) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice) === preferredLanguage) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice).startsWith(`${preferredBaseLanguage}-`) && voice.default) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice) === preferredBaseLanguage) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice).startsWith(`${preferredBaseLanguage}-`)) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice) === browserLanguage && voice.default) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice) === browserLanguage) ??
+      voices.find((voice) => normalizedVoiceLanguage(voice).startsWith(`${browserBaseLanguage}-`)) ??
+      voices.find((voice) => voice.default) ??
+      voices[0]
+    );
+  }
+
+  private showUtilityStatus(message: string, isError = false, duration = isError ? 2800 : 1800): void {
+    if (!this.utilityStatusNode) {
+      return;
+    }
+
+    this.clearUtilityStatusTimer();
+    this.utilityStatusNode.hidden = false;
+    this.utilityStatusNode.dataset.tone = isError ? 'error' : 'default';
+    this.utilityStatusNode.textContent = message;
+    this.utilityStatusTimer = window.setTimeout(() => this.clearUtilityStatus(), duration);
+  }
+
+  private clearUtilityStatus(): void {
+    this.clearUtilityStatusTimer();
+    if (!this.utilityStatusNode) {
+      return;
+    }
+
+    this.utilityStatusNode.hidden = true;
+    this.utilityStatusNode.dataset.tone = 'default';
+    this.utilityStatusNode.textContent = '';
+  }
+
+  private clearUtilityStatusTimer(): void {
+    if (this.utilityStatusTimer !== null) {
+      window.clearTimeout(this.utilityStatusTimer);
+      this.utilityStatusTimer = null;
+    }
   }
 
   private scheduleReposition(): void {
@@ -457,17 +814,25 @@ export class SelectionTranslator {
 
   private hideTooltip(preserveSelectionText = false): void {
     this.clearHideTimer();
+    this.clearTooltipInteractionTimer();
+    this.clearUtilityStatus();
+    this.stopSpeaking(true);
     this.tooltip?.remove();
     this.tooltip = null;
     this.triggerButton = null;
+    this.speakButton = null;
+    this.copyButton = null;
     this.titleNode = null;
     this.resultNode = null;
+    this.utilityStatusNode = null;
     this.translateButton = null;
     this.settingsButton = null;
     this.anchor = null;
+    this.translatedText = '';
     if (!preserveSelectionText) {
       this.activeSelectionText = '';
     }
+    this.ignoreSelectionUpdates = false;
     this.isPointerInsideTooltip = false;
     this.isPinned = false;
     this.isTranslating = false;

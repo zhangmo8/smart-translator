@@ -158,6 +158,12 @@
   box-shadow: none;
 }
 
+.smart-translator-icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .smart-translator-button--ghost,
 .smart-translator-icon-button {
   background: rgba(148, 163, 184, 0.12);
@@ -293,6 +299,12 @@
   gap: 12px;
 }
 
+.smart-translator-tooltip__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .smart-translator-tooltip__title {
   margin-top: 6px;
   font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
@@ -331,6 +343,33 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.smart-translator-tooltip__action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.smart-translator-tooltip__action[data-state="active"] {
+  background: rgba(125, 211, 252, 0.18);
+  border-color: rgba(125, 211, 252, 0.36);
+  color: #e0f2fe;
+  box-shadow:
+    0 0 0 4px rgba(125, 211, 252, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.smart-translator-tooltip__status {
+  position: relative;
+  z-index: 1;
+  min-height: 17px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.smart-translator-tooltip__status[data-tone="error"] {
+  color: #fecdd3;
 }
 
 .smart-translator-bar[data-tone="success"] .smart-translator-bar__status,
