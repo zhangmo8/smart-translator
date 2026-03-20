@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file gives repository-specific guidance to coding agents working in `smart-translator`.
+This file gives repository-specific guidance to coding agents working in `silence-translator`.
 
 ## Project Overview
 

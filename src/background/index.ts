@@ -24,12 +24,12 @@ import type {
 } from '../types';
 import { BATCH_SIZE, ENGINE_META, RATE_LIMIT_MS } from '../utils/constants';
 
-const MENU_TRANSLATE_SELECTION = 'smart-translator:translate-selection';
-const MENU_TRANSLATE_PAGE = 'smart-translator:translate-page';
-const MENU_SILENT_PARENT = 'smart-translator:silent-parent';
-const MENU_SILENT_PARAGRAPH = 'smart-translator:silent-paragraph';
-const MENU_SILENT_FULL_PAGE = 'smart-translator:silent-full-page';
-const MENU_OPEN_OPTIONS = 'smart-translator:open-options';
+const MENU_TRANSLATE_SELECTION = 'silence-translator:translate-selection';
+const MENU_TRANSLATE_PAGE = 'silence-translator:translate-page';
+const MENU_SILENT_PARENT = 'silence-translator:silent-parent';
+const MENU_SILENT_PARAGRAPH = 'silence-translator:silent-paragraph';
+const MENU_SILENT_FULL_PAGE = 'silence-translator:silent-full-page';
+const MENU_OPEN_OPTIONS = 'silence-translator:open-options';
 
 const engineQueues = new Map<EngineProvider, Promise<unknown>>();
 const lastExecution = new Map<EngineProvider, number>();
@@ -63,11 +63,15 @@ function assertEngineConfigured(provider: EngineProvider, config: EngineConfig):
   const missing: string[] = [];
 
   if (meta.requiresApiKey && !config.apiKey?.trim()) {
-    missing.push('API key');
+    missing.push(meta.apiKeyLabel ?? 'API key');
+  }
+
+  if (meta.requiresApiSecret && !config.apiSecret?.trim()) {
+    missing.push(meta.apiSecretLabel ?? 'API secret');
   }
 
   if (meta.requiresRegion && !config.region?.trim()) {
-    missing.push('Azure region');
+    missing.push(meta.regionLabel ?? 'Region');
   }
 
   if (!missing.length) {
@@ -288,7 +292,7 @@ async function rebuildContextMenus(): Promise<void> {
 
   await createContextMenu({
     id: MENU_OPEN_OPTIONS,
-    title: 'Open smart-translator settings',
+    title: 'Open silence-translator settings',
     contexts: ['action'],
   });
 }

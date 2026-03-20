@@ -258,7 +258,7 @@ export class SelectionTranslator {
   private isSelectionInsideUi(selection: Selection): boolean {
     const anchorParent = selection.anchorNode instanceof Element ? selection.anchorNode : selection.anchorNode?.parentElement;
     const focusParent = selection.focusNode instanceof Element ? selection.focusNode : selection.focusNode?.parentElement;
-    return Boolean(anchorParent?.closest('[data-smart-translator-ui="true"]') || focusParent?.closest('[data-smart-translator-ui="true"]'));
+    return Boolean(anchorParent?.closest('[data-silence-translator-ui="true"]') || focusParent?.closest('[data-silence-translator-ui="true"]'));
   }
 
   private captureElementAnchor(element: HTMLElement): void {
@@ -300,40 +300,40 @@ export class SelectionTranslator {
 
     const iconUrl = chrome.runtime.getURL('icons/icon-32.png');
     const tooltip = document.createElement('div');
-    tooltip.className = 'smart-translator-tooltip';
-    tooltip.setAttribute('data-smart-translator-ui', 'true');
+    tooltip.className = 'silence-translator-tooltip';
+    tooltip.setAttribute('data-silence-translator-ui', 'true');
     tooltip.dataset.smartTranslatorUi = 'true';
     tooltip.dataset.state = 'icon';
     tooltip.dataset.tone = 'default';
     tooltip.innerHTML = `
-      <button class="smart-translator-selection-trigger" type="button" data-role="trigger" aria-label="Translate selection">
-        <img class="smart-translator-selection-trigger__logo" src="${iconUrl}" alt="" draggable="false" />
+      <button class="silence-translator-selection-trigger" type="button" data-role="trigger" aria-label="Translate selection">
+        <img class="silence-translator-selection-trigger__logo" src="${iconUrl}" alt="" draggable="false" />
       </button>
-      <div class="smart-translator-tooltip__shell">
-        <div class="smart-translator-tooltip__header">
+      <div class="silence-translator-tooltip__shell">
+        <div class="silence-translator-tooltip__header">
           <div>
-            <div class="smart-translator-tooltip__eyebrow">Selection translator</div>
-            <div class="smart-translator-tooltip__title" data-role="title">Ready to translate</div>
+            <div class="silence-translator-tooltip__eyebrow">Selection translator</div>
+            <div class="silence-translator-tooltip__title" data-role="title">Ready to translate</div>
           </div>
-          <div class="smart-translator-tooltip__header-actions">
-            <button class="smart-translator-icon-button smart-translator-tooltip__action" type="button" data-role="speak" aria-label="Read translation aloud" title="Read translation aloud">
+          <div class="silence-translator-tooltip__header-actions">
+            <button class="silence-translator-icon-button silence-translator-tooltip__action" type="button" data-role="speak" aria-label="Read translation aloud" title="Read translation aloud">
               ${SPEAK_ICON}
             </button>
-            <button class="smart-translator-icon-button smart-translator-tooltip__action" type="button" data-role="copy" aria-label="Copy translation" title="Copy translation">
+            <button class="silence-translator-icon-button silence-translator-tooltip__action" type="button" data-role="copy" aria-label="Copy translation" title="Copy translation">
               ${COPY_ICON}
             </button>
-            <button class="smart-translator-icon-button" type="button" data-role="close" aria-label="Close" title="Close">x</button>
+            <button class="silence-translator-icon-button" type="button" data-role="close" aria-label="Close" title="Close">x</button>
           </div>
         </div>
-        <div class="smart-translator-tooltip__body">
-          <div class="smart-translator-tooltip__text" data-role="result">
+        <div class="silence-translator-tooltip__body">
+          <div class="silence-translator-tooltip__text" data-role="result">
             Keep the selection, then translate it inline.
           </div>
         </div>
-        <div class="smart-translator-tooltip__status" data-role="utility-status" aria-live="polite" hidden></div>
-        <div class="smart-translator-tooltip__footer">
-          <button class="smart-translator-button" type="button" data-role="translate">Translate selection</button>
-          <button class="smart-translator-button smart-translator-button--ghost" type="button" data-role="settings" hidden>Open settings</button>
+        <div class="silence-translator-tooltip__status" data-role="utility-status" aria-live="polite" hidden></div>
+        <div class="silence-translator-tooltip__footer">
+          <button class="silence-translator-button" type="button" data-role="translate">Translate selection</button>
+          <button class="silence-translator-button silence-translator-button--ghost" type="button" data-role="settings" hidden>Open settings</button>
         </div>
       </div>
     `.trim();
@@ -448,7 +448,7 @@ export class SelectionTranslator {
     this.tooltip.dataset.tone = 'default';
     this.titleNode.textContent = 'Selection ready';
     this.resultNode.textContent = 'Click the icon to translate this selection.';
-    this.resultNode.classList.remove('smart-translator-tooltip__text--error');
+    this.resultNode.classList.remove('silence-translator-tooltip__text--error');
     this.translateButton.textContent = 'Translate again';
     this.translateButton.disabled = false;
     if (this.settingsButton) {
@@ -473,7 +473,7 @@ export class SelectionTranslator {
     this.tooltip.dataset.tone = 'default';
     this.titleNode.textContent = 'Translating selection';
     this.resultNode.textContent = 'Sending your text to the current engine.';
-    this.resultNode.classList.remove('smart-translator-tooltip__text--error');
+    this.resultNode.classList.remove('silence-translator-tooltip__text--error');
     this.translateButton.textContent = 'Translating...';
     this.translateButton.disabled = true;
     if (this.settingsButton) {
@@ -498,7 +498,7 @@ export class SelectionTranslator {
     this.tooltip.dataset.tone = isError ? 'error' : 'success';
     this.titleNode.textContent = isError ? 'Translation needs attention' : 'Translation ready';
     this.resultNode.textContent = text;
-    this.resultNode.classList.toggle('smart-translator-tooltip__text--error', isError);
+    this.resultNode.classList.toggle('silence-translator-tooltip__text--error', isError);
     this.translateButton.textContent = isError ? 'Try again' : 'Translate again';
     this.translateButton.disabled = false;
 
@@ -839,9 +839,9 @@ export class SelectionTranslator {
   }
 
   private flash(element: HTMLElement): void {
-    element.classList.remove('smart-translator-flash');
+    element.classList.remove('silence-translator-flash');
     void element.offsetWidth;
-    element.classList.add('smart-translator-flash');
-    window.setTimeout(() => element.classList.remove('smart-translator-flash'), 900);
+    element.classList.add('silence-translator-flash');
+    window.setTimeout(() => element.classList.remove('silence-translator-flash'), 900);
   }
 }

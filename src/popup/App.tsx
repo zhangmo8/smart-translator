@@ -115,7 +115,7 @@ export default function App() {
         <div className="relative space-y-5">
           <header className="flex items-start justify-between gap-4">
             <div>
-              <div className="metric-chip inline-flex">smart-translator</div>
+              <div className="metric-chip inline-flex">silence-translator</div>
               <h1 className="mt-3 font-display text-[28px] leading-none text-white">Translate with a single spark.</h1>
               <p className="mt-2 max-w-[28ch] text-sm text-slate-300">
                 Quick input, engine switching, and synced language preferences inside one polished cockpit.

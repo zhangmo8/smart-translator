@@ -2,7 +2,7 @@
 
 ## Ready artifacts
 
-- Upload ZIP: `release/smart-translator-chrome-web-store.zip`
+- Upload ZIP: `release/silence-translator-chrome-web-store.zip`
 - Build output: `dist/`
 - Promo tile upload folder: `release/webstore-assets/`
 - One-command pack script: `npm run package:chrome`
@@ -178,7 +178,7 @@ Typical declarations:
 
 1. Run `npm run package:chrome`.
 2. Register the developer account and enable 2-Step Verification.
-3. Upload `release/smart-translator-chrome-web-store.zip`.
+3. Upload `release/silence-translator-chrome-web-store.zip`.
 4. Fill in the single purpose field with the text above.
 5. Complete the listing with screenshots and promo tile.
 6. Add a public privacy policy URL that matches actual extension behavior.

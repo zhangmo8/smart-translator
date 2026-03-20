@@ -25,6 +25,7 @@ async function initialize(): Promise<void> {
   const silentTranslator = new SilentTranslator(settingsGetter, pageTranslator);
   selectionTranslator.updateDisplaySettings(currentSettings.showSelectionIcon);
   const hotkeys = new HotkeyManager(currentSettings.hotkeys, {
+    canRestore: () => pageTranslator.isTranslated(),
     selection: async () => {
       const handledInput = await selectionTranslator.translateFocusedInput();
       if (handledInput) {

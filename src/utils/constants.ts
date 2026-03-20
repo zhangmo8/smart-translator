@@ -1,6 +1,10 @@
 import type { EngineMeta, EngineProvider } from '../types';
 
 export const PROVIDER_ORDER: EngineProvider[] = [
+  'baidu',
+  'youdao',
+  'tencent',
+  'alibaba',
   'microsoft',
   'deepl',
   'google',
@@ -13,6 +17,49 @@ export const PROVIDER_ORDER: EngineProvider[] = [
 ];
 
 export const ENGINE_META: Record<EngineProvider, EngineMeta> = {
+  baidu: {
+    provider: 'baidu',
+    label: 'Baidu Translate',
+    category: 'standard',
+    requiresApiKey: true,
+    requiresApiSecret: true,
+    apiKeyLabel: 'APP ID',
+    apiSecretLabel: 'Secret key',
+    docsHint: 'Baidu Translate APP ID + secret key',
+  },
+  tencent: {
+    provider: 'tencent',
+    label: 'Tencent Cloud TMT',
+    category: 'standard',
+    requiresApiKey: true,
+    requiresApiSecret: true,
+    requiresRegion: true,
+    apiKeyLabel: 'SecretId',
+    apiSecretLabel: 'SecretKey',
+    regionLabel: 'Region',
+    regionPlaceholder: 'ap-guangzhou',
+    docsHint: 'Tencent Cloud SecretId + SecretKey + region',
+  },
+  alibaba: {
+    provider: 'alibaba',
+    label: 'Alibaba Cloud MT',
+    category: 'standard',
+    requiresApiKey: true,
+    requiresApiSecret: true,
+    apiKeyLabel: 'AccessKey ID',
+    apiSecretLabel: 'AccessKey Secret',
+    docsHint: 'Alibaba Cloud AccessKey ID + AccessKey Secret',
+  },
+  youdao: {
+    provider: 'youdao',
+    label: 'Youdao Zhiyun',
+    category: 'standard',
+    requiresApiKey: true,
+    requiresApiSecret: true,
+    apiKeyLabel: 'App key',
+    apiSecretLabel: 'App secret',
+    docsHint: 'Youdao app key + app secret',
+  },
   google: {
     provider: 'google',
     label: 'Google Translate API',
@@ -26,6 +73,8 @@ export const ENGINE_META: Record<EngineProvider, EngineMeta> = {
     category: 'standard',
     requiresApiKey: true,
     requiresRegion: true,
+    regionLabel: 'Azure region',
+    regionPlaceholder: 'eastus',
     docsHint: 'Translator key + Azure region',
   },
   deepl: {
@@ -99,6 +148,10 @@ export const CACHE_LIMIT = 300;
 export const TRANSLATION_CACHE_VERSION = '2026-03-17-2';
 
 export const RATE_LIMIT_MS: Record<EngineProvider, number> = {
+  baidu: 260,
+  tencent: 220,
+  alibaba: 160,
+  youdao: 220,
   google: 180,
   microsoft: 180,
   deepl: 220,
@@ -111,6 +164,10 @@ export const RATE_LIMIT_MS: Record<EngineProvider, number> = {
 };
 
 export const BATCH_SIZE: Record<EngineProvider, number> = {
+  baidu: 1,
+  tencent: 1,
+  alibaba: 1,
+  youdao: 8,
   google: 32,
   microsoft: 32,
   deepl: 24,

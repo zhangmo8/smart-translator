@@ -1,4 +1,8 @@
 export type EngineProvider =
+  | 'baidu'
+  | 'tencent'
+  | 'alibaba'
+  | 'youdao'
   | 'google'
   | 'microsoft'
   | 'deepl'
@@ -23,6 +27,7 @@ export interface HotkeyConfig {
 
 export interface EngineConfig {
   apiKey?: string;
+  apiSecret?: string;
   model?: string;
   systemPrompt?: string;
   region?: string;
@@ -131,8 +136,13 @@ export interface EngineMeta {
   defaultModel?: string;
   defaultApiUrl?: string;
   requiresApiKey: boolean;
+  requiresApiSecret?: boolean;
   requiresRegion?: boolean;
   supportsSystemPrompt?: boolean;
+  apiKeyLabel?: string;
+  apiSecretLabel?: string;
+  regionLabel?: string;
+  regionPlaceholder?: string;
   docsHint: string;
 }
 

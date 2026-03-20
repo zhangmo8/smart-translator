@@ -1,6 +1,6 @@
-# smart-translator
+# silence-translator
 
-`smart-translator` is a Manifest V3 browser extension for fast translation across selected text, input fields, silent keyboard workflows, and full-page DOM translation. It uses a background service worker for all network requests, stores synced preferences in `chrome.storage.sync`, and keeps history/cache in `chrome.storage.local`.
+`silence-translator` is a Manifest V3 browser extension for fast translation across selected text, input fields, silent keyboard workflows, and full-page DOM translation. It uses a background service worker for all network requests, stores synced preferences in `chrome.storage.sync`, and keeps history/cache in `chrome.storage.local`.
 
 ## Highlights
 
@@ -19,6 +19,10 @@
 
 ### Standard APIs
 
+- Baidu Translate
+- Tencent Cloud TMT
+- Alibaba Cloud MT
+- Youdao Zhiyun
 - Google Translate API
 - Microsoft Azure Translator
 - DeepL API
@@ -56,7 +60,7 @@ Note: browser-level command shortcuts can also be customized in the browser’s 
 ## Project structure
 
 ```text
-smart-translator/
+silence-translator/
 ├── manifest.json
 ├── popup.html
 ├── options.html
@@ -119,6 +123,10 @@ npm run build:firefox
 Open the extension options page and fill the provider card for the engine you want to use:
 
 - Google: API key
+- Baidu: APP ID + secret key
+- Tencent Cloud TMT: SecretId + SecretKey + region
+- Alibaba Cloud MT: AccessKey ID + AccessKey Secret
+- Youdao Zhiyun: app key + app secret
 - Microsoft: API key + Azure region
 - DeepL: API key (+ optional custom API URL)
 - LibreTranslate: optional API key + endpoint URL

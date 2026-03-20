@@ -1,3 +1,4 @@
+import { BATCH_SIZE } from '../utils/constants';
 import type { TranslateBatchResponse, TranslationSettings } from '../types';
 
 interface NodeRecord {
@@ -193,17 +194,17 @@ export class PageTranslator {
   }
 
   highlightElement(element: HTMLElement): void {
-    element.classList.remove('smart-translator-flash');
+    element.classList.remove('silence-translator-flash');
     void element.offsetWidth;
-    element.classList.add('smart-translator-flash');
-    window.setTimeout(() => element.classList.remove('smart-translator-flash'), 900);
+    element.classList.add('silence-translator-flash');
+    window.setTimeout(() => element.classList.remove('silence-translator-flash'), 900);
   }
 
   findParagraphCandidate(target: Element | null): HTMLElement | null {
     let current: Element | null = target;
     while (current && current !== document.body) {
       if (current instanceof HTMLElement) {
-        if (current.closest('[data-smart-translator-ui="true"]')) {
+        if (current.closest('[data-silence-translator-ui="true"]')) {
           return null;
         }
 
@@ -236,7 +237,7 @@ export class PageTranslator {
       };
     }
 
-    const chunkSize = settings.defaultEngine === 'libretranslate' ? 8 : 24;
+    const chunkSize = BATCH_SIZE[settings.defaultEngine];
     const translatedTexts: string[] = [];
     let detectedSourceLanguage = '';
 
@@ -332,7 +333,7 @@ export class PageTranslator {
           return NodeFilter.FILTER_REJECT;
         }
 
-        if (parent.closest('[data-smart-translator-ui="true"]')) {
+        if (parent.closest('[data-silence-translator-ui="true"]')) {
           return NodeFilter.FILTER_REJECT;
         }
 
@@ -375,24 +376,24 @@ export class PageTranslator {
     }
 
     const bar = document.createElement('div');
-    bar.className = 'smart-translator-bar';
+    bar.className = 'silence-translator-bar';
     bar.dataset.smartTranslatorUi = 'true';
-    bar.setAttribute('data-smart-translator-ui', 'true');
+    bar.setAttribute('data-silence-translator-ui', 'true');
 
     bar.innerHTML = `
-      <div class="smart-translator-bar__shell">
-        <div class="smart-translator-bar__brand">
-          <span class="smart-translator-bar__dot"></span>
+      <div class="silence-translator-bar__shell">
+        <div class="silence-translator-bar__brand">
+          <span class="silence-translator-bar__dot"></span>
           <div>
-            <div class="smart-translator-bar__title">smart-translator</div>
-            <div class="smart-translator-bar__status">Ready to translate</div>
+            <div class="silence-translator-bar__title">silence-translator</div>
+            <div class="silence-translator-bar__status">Ready to translate</div>
           </div>
         </div>
-        <div class="smart-translator-bar__actions">
-          <button class="smart-translator-button smart-translator-button--ghost" data-action="settings">Settings</button>
-          <button class="smart-translator-button smart-translator-button--ghost" data-action="toggle-original">Show original</button>
-          <button class="smart-translator-button smart-translator-button--ghost" data-action="restore">Restore</button>
-          <button class="smart-translator-button" data-action="close">Close</button>
+        <div class="silence-translator-bar__actions">
+          <button class="silence-translator-button silence-translator-button--ghost" data-action="settings">Settings</button>
+          <button class="silence-translator-button silence-translator-button--ghost" data-action="toggle-original">Show original</button>
+          <button class="silence-translator-button silence-translator-button--ghost" data-action="restore">Restore</button>
+          <button class="silence-translator-button" data-action="close">Close</button>
         </div>
       </div>
     `;
@@ -423,7 +424,7 @@ export class PageTranslator {
 
     document.documentElement.appendChild(bar);
     this.bar = bar;
-    this.statusLabel = bar.querySelector('.smart-translator-bar__status');
+    this.statusLabel = bar.querySelector('.silence-translator-bar__status');
     this.toggleOriginalButton = bar.querySelector('[data-action="toggle-original"]');
     this.updateBarButtons();
   }

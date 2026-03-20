@@ -91,11 +91,12 @@ const ProviderCard = memo(function ProviderCard({
   onProviderChange: (provider: EngineProvider, field: string, value: string) => void;
 }) {
   const meta = ENGINE_META[provider];
+  const fieldClassName = (fullWidth = false): string => `settings-field-stack provider-field${fullWidth ? ' provider-field--full' : ''}`;
 
   return (
-    <article className="glass-card provider-card flex flex-col gap-5 p-5 md:p-6">
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
+    <article className="glass-card provider-card flex flex-col p-5 md:p-5 xl:p-6">
+      <header className="provider-card__header">
+        <div className="provider-card__meta">
           <div className="metric-chip inline-flex">{meta.category}</div>
           <div className="settings-provider-badge">{meta.requiresApiKey ? 'Credential required' : 'Ready by default'}</div>
         </div>
@@ -105,9 +106,9 @@ const ProviderCard = memo(function ProviderCard({
         </div>
       </header>
 
-      <div className="grid gap-4">
-        <div className="settings-field-stack">
-          <label className="soft-label">API key</label>
+      <div className="provider-fields-grid">
+        <div className={fieldClassName()}>
+          <label className="soft-label">{meta.apiKeyLabel ?? 'API key'}</label>
           <input
             className="field"
             type="password"
@@ -117,12 +118,25 @@ const ProviderCard = memo(function ProviderCard({
           />
         </div>
 
-        {meta.requiresRegion ? (
-          <div className="settings-field-stack">
-            <label className="soft-label">Region</label>
+        {meta.requiresApiSecret ? (
+          <div className={fieldClassName()}>
+            <label className="soft-label">{meta.apiSecretLabel ?? 'API secret'}</label>
             <input
               className="field"
-              placeholder="eastus"
+              type="password"
+              placeholder="Required"
+              value={config.apiSecret ?? ''}
+              onChange={(event) => onProviderChange(provider, 'apiSecret', event.target.value)}
+            />
+          </div>
+        ) : null}
+
+        {meta.requiresRegion ? (
+          <div className={fieldClassName(provider === 'tencent')}>
+            <label className="soft-label">{meta.regionLabel ?? 'Region'}</label>
+            <input
+              className="field"
+              placeholder={meta.regionPlaceholder ?? 'Region'}
               value={config.region ?? ''}
               onChange={(event) => onProviderChange(provider, 'region', event.target.value)}
             />
@@ -130,7 +144,7 @@ const ProviderCard = memo(function ProviderCard({
         ) : null}
 
         {provider === 'deepl' || provider === 'libretranslate' ? (
-          <div className="settings-field-stack">
+          <div className={fieldClassName(true)}>
             <label className="soft-label">API URL</label>
             <input
               className="field"
@@ -142,7 +156,7 @@ const ProviderCard = memo(function ProviderCard({
         ) : null}
 
         {provider === 'doubao' ? (
-          <div className="settings-field-stack">
+          <div className={fieldClassName(true)}>
             <label className="soft-label">Endpoint</label>
             <input
               className="field"
@@ -155,7 +169,7 @@ const ProviderCard = memo(function ProviderCard({
 
         {meta.category === 'ai' ? (
           <>
-            <div className="settings-field-stack">
+            <div className={fieldClassName()}>
               <label className="soft-label">Model</label>
               <input
                 className="field"
@@ -165,7 +179,7 @@ const ProviderCard = memo(function ProviderCard({
               />
             </div>
 
-            <div className="settings-field-stack">
+            <div className={fieldClassName(true)}>
               <label className="soft-label">System prompt</label>
               <textarea
                 className="field min-h-[140px] resize-y"
@@ -306,7 +320,7 @@ export default function App() {
   };
 
   if (!draft) {
-    return <main className="min-h-screen p-10 text-sm text-slate-300">Loading smart-translator options...</main>;
+    return <main className="min-h-screen p-10 text-sm text-slate-300">Loading silence-translator options...</main>;
   }
 
   const statusTone = saving ? 'saving' : status.toLowerCase().includes('failed') ? 'error' : 'ready';
@@ -319,7 +333,7 @@ export default function App() {
           <div className="settings-hero__glow" />
           <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.55fr)] xl:items-end">
             <div className="max-w-4xl">
-              <div className="metric-chip inline-flex">smart-translator · v{__APP_VERSION__}</div>
+              <div className="metric-chip inline-flex">silence-translator · v{__APP_VERSION__}</div>
               <h1 className="settings-hero__title mt-5">Shape how translation feels before you ever trigger it.</h1>
               <p className="settings-hero__copy mt-5 max-w-3xl">
                 Dial in language defaults, engine credentials, AI prompts, silent mode, and keyboard behavior from one faster control surface. The

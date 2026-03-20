@@ -57,7 +57,7 @@
 
 @layer components {
   .glass-card {
-    @apply rounded-[28px] border border-white/10 bg-white/5 shadow-panel backdrop-blur-xl;
+    @apply rounded-[28px] border border-white/10 bg-white/5;
   }
 
   html[data-theme='light'] .glass-card {
@@ -81,7 +81,7 @@
   }
 
   .pill-button {
-    @apply inline-flex items-center justify-center rounded-full bg-gradient-to-r from-teal-300 via-cyan-300 to-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-400/20 transition hover:-translate-y-0.5;
+    @apply inline-flex items-center justify-center rounded-full bg-gradient-to-r from-teal-300 via-cyan-300 to-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 transition;
   }
 
   .ghost-button {
@@ -186,20 +186,8 @@ html[data-theme='light'] .smart-ui .bg-slate-950\/25 {
   background:
     linear-gradient(145deg, rgba(10, 18, 33, 0.8), rgba(14, 23, 38, 0.62)),
     rgba(255, 255, 255, 0.02);
-  box-shadow:
-    0 24px 80px rgba(15, 23, 42, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  transition:
-    border-color 220ms ease,
-    transform 220ms ease,
-    background-color 220ms ease,
-    box-shadow 220ms ease;
-}
-
-.smart-ui--options .glass-card:hover {
-  border-color: rgba(148, 163, 184, 0.2);
-  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 220ms ease, background-color 220ms ease;
 }
 
 html[data-theme='light'] .smart-ui--options .glass-card {
@@ -207,9 +195,7 @@ html[data-theme='light'] .smart-ui--options .glass-card {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.72)),
     rgba(255, 255, 255, 0.75);
-  box-shadow:
-    0 20px 60px rgba(148, 163, 184, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .settings-page {
@@ -346,11 +332,11 @@ html[data-theme='light'] .smart-ui--options .glass-card {
   border-radius: 999px;
   background: white;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.24);
-  transition: transform 180ms ease;
+  margin-left: 0;
 }
 
 .settings-toggle[data-checked='true'] .settings-toggle__thumb {
-  transform: translateX(1.7rem);
+  margin-left: 1.7rem;
 }
 
 .settings-toggle__label {
@@ -387,19 +373,56 @@ html[data-theme='light'] .smart-ui--options .glass-card {
 }
 
 .settings-provider-grid {
-  align-items: start;
+  align-items: stretch;
+  grid-auto-rows: 1fr;
 }
 
 .provider-card {
-  content-visibility: auto;
-  contain: layout paint style;
-  contain-intrinsic-size: 560px;
+  height: 100%;
+  gap: 1rem;
+  background:
+    linear-gradient(160deg, rgba(8, 14, 28, 0.92), rgba(12, 20, 36, 0.72)),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@supports (content-visibility: auto) {
+  .provider-card {
+    content-visibility: auto;
+    contain: layout paint style;
+    contain-intrinsic-size: 420px;
+  }
+}
+
+.provider-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.provider-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.provider-fields-grid {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.provider-field .soft-label {
+  margin-bottom: 0.45rem;
+}
+
+.provider-card .field {
+  min-height: 3.15rem;
 }
 
 .settings-provider-title {
-  font-size: 1.2rem;
+  font-size: 1.12rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
   color: white;
 }
 
@@ -407,10 +430,10 @@ html[data-theme='light'] .smart-ui--options .glass-card {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
-  padding: 0.3rem 0.65rem;
+  padding: 0.28rem 0.62rem;
   font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgb(148 163 184);
 }
@@ -427,6 +450,13 @@ html[data-theme='light'] .settings-note,
 html[data-theme='light'] .settings-provider-badge {
   border-color: rgba(15, 23, 42, 0.08);
   background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme='light'] .provider-card {
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(247, 250, 252, 0.86)),
+    rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 html[data-theme='light'] .settings-toggle__track {
@@ -468,13 +498,19 @@ html[data-theme='light'] .settings-provider-title {
   }
 
   .settings-provider-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 23rem), 1fr));
+  }
+
+  .provider-fields-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
-@media (min-width: 1540px) {
-  .settings-provider-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .provider-fields-grid > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .provider-field--full {
+    grid-column: 1 / -1;
   }
 }
 

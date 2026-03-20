@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist-firefox"
 RELEASE_DIR="$ROOT_DIR/release"
-ZIP_PATH="$RELEASE_DIR/smart-translator-firefox-addons.zip"
+ZIP_PATH="$RELEASE_DIR/silence-translator-firefox-addons.zip"
 
 if ! command -v npm >/dev/null 2>&1; then
   echo "npm is required but was not found in PATH." >&2

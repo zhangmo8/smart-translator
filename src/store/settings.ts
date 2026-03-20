@@ -15,6 +15,10 @@ export const DEFAULT_HOTKEYS: HotkeyConfig = {
 
 export function createDefaultEngineSettings(): EngineSettings {
   return {
+    baidu: {},
+    tencent: { region: 'ap-guangzhou' },
+    alibaba: {},
+    youdao: {},
     google: {},
     microsoft: {},
     deepl: { apiUrl: ENGINE_META.deepl.defaultApiUrl },

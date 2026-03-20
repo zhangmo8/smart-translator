@@ -14,6 +14,14 @@ export abstract class BaseTranslationEngine {
     return apiKey;
   }
 
+  protected requireApiSecret(apiSecret: string | undefined, label = 'API secret'): string {
+    if (!apiSecret) {
+      throw new Error(`${label} is required for ${this.provider}.`);
+    }
+
+    return apiSecret;
+  }
+
   protected async requestJson<T>(url: string, init: RequestInit): Promise<T> {
     const response = await fetch(url, init);
     if (!response.ok) {

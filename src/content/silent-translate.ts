@@ -17,7 +17,7 @@ export class SilentTranslator {
   ) {}
 
   setHoveredElement(element: Element | null): void {
-    if (element?.closest('[data-smart-translator-ui="true"]')) {
+    if (element?.closest('[data-silence-translator-ui="true"]')) {
       return;
     }
 
@@ -87,13 +87,13 @@ export class SilentTranslator {
     this.hideLoadingIndicator();
 
     const indicator = document.createElement('div');
-    indicator.className = 'smart-translator-inline-loading';
+    indicator.className = 'silence-translator-inline-loading';
     indicator.dataset.smartTranslatorUi = 'true';
-    indicator.setAttribute('data-smart-translator-ui', 'true');
+    indicator.setAttribute('data-silence-translator-ui', 'true');
     indicator.innerHTML = `
-      <div class="smart-translator-inline-loading__shell">
-        <span class="smart-translator-inline-loading__spinner" aria-hidden="true"></span>
-        <span class="smart-translator-inline-loading__label">Translating...</span>
+      <div class="silence-translator-inline-loading__shell">
+        <span class="silence-translator-inline-loading__spinner" aria-hidden="true"></span>
+        <span class="silence-translator-inline-loading__label">Translating...</span>
       </div>
     `.trim();
 

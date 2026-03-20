@@ -11,9 +11,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const isFirefox = mode === 'firefox';
+  const appVersion = process.env.npm_package_version ?? manifest.version;
   const extensionManifest = {
     ...manifest,
-    name: isFirefox ? 'smart-translator (Firefox)' : manifest.name,
+    version: appVersion,
+    name: isFirefox ? 'silence-translator (Firefox)' : manifest.name,
   };
 
   return {
@@ -29,7 +31,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.1.0'),
+      __APP_VERSION__: JSON.stringify(appVersion),
     },
   };
 });
