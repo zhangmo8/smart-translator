@@ -420,7 +420,23 @@ export default function App() {
                     <option value="full-page">Full page</option>
                   </select>
                 </div>
+
+                <div className="settings-field-stack">
+                  <label className="soft-label">Silent output</label>
+                  <select
+                    className="field"
+                    value={draft.silentDisplayMode}
+                    onChange={(event) => updateTopLevelField('silentDisplayMode', event.target.value as TranslationSettings['silentDisplayMode'])}
+                  >
+                    <option value="translate-only">Silent translate</option>
+                    <option value="bilingual">Bilingual comparison</option>
+                  </select>
+                </div>
               </div>
+
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">
+                Silent output controls whether the page text is replaced in place or kept visible with a translated companion block directly below it.
+              </p>
 
               <div className="settings-toggle-grid mt-6">
                 <div className="settings-toggle-card">

@@ -231,6 +231,17 @@
   animation: smartTranslatorSpinner 760ms linear infinite;
 }
 
+.silence-translator-bilingual-block {
+  display: block;
+  box-sizing: border-box;
+  margin-top: 0.5em;
+  white-space: pre-wrap;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  opacity: 0.92;
+}
+
 .silence-translator-selection-trigger {
   all: unset;
   box-sizing: border-box;

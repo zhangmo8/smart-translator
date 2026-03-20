@@ -6,6 +6,7 @@ import { SilentTranslator } from './silent-translate';
 import { HotkeyManager } from './hotkeys';
 
 import { getSettings } from '../store/settings';
+import { normalizeHotkey } from '../utils/hotkeys';
 import type { ContentMessage, TranslationSettings } from '../types';
 
 let currentSettings: TranslationSettings;
@@ -25,7 +26,22 @@ async function initialize(): Promise<void> {
   const silentTranslator = new SilentTranslator(settingsGetter, pageTranslator);
   selectionTranslator.updateDisplaySettings(currentSettings.showSelectionIcon);
   const hotkeys = new HotkeyManager(currentSettings.hotkeys, {
-    canRestore: () => pageTranslator.isTranslated(),
+    canRestore: () => {
+      const hotkeysOverlap = normalizeHotkey(currentSettings.hotkeys.silent) === normalizeHotkey(currentSettings.hotkeys.restore);
+      if (!hotkeysOverlap) {
+        return false;
+      }
+
+      if (currentSettings.silentMode === 'paragraph') {
+        return silentTranslator.isHoveredParagraphTranslated();
+      }
+
+      if (currentSettings.silentDisplayMode === 'bilingual') {
+        return silentTranslator.hasBilingualPageTranslation();
+      }
+
+      return pageTranslator.isTranslated();
+    },
     selection: async () => {
       const handledInput = await selectionTranslator.translateFocusedInput();
       if (handledInput) {

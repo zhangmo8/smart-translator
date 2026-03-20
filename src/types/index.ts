@@ -16,6 +16,7 @@ export type EngineProvider =
 export type EngineCategory = 'standard' | 'ai';
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type SilentMode = 'paragraph' | 'full-page';
+export type SilentDisplayMode = 'translate-only' | 'bilingual';
 export type CommandName = 'translate-selection' | 'silent-translate' | 'toggle-page-translate' | 'restore-original';
 
 export interface HotkeyConfig {
@@ -45,6 +46,7 @@ export interface TranslationSettings {
   cacheEnabled: boolean;
   showSelectionIcon: boolean;
   silentMode: SilentMode;
+  silentDisplayMode: SilentDisplayMode;
   hotkeys: HotkeyConfig;
   engines: EngineSettings;
 }

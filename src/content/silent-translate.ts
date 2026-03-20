@@ -1,12 +1,22 @@
+import { BATCH_SIZE } from '../utils/constants';
+
 import { PageTranslator } from './page-translate';
 
-import type { TranslationSettings } from '../types';
+import type { TranslateBatchResponse, TranslationSettings } from '../types';
 
 type SettingsGetter = () => Promise<TranslationSettings>;
+type BlockTranslationEntry = {
+  element: HTMLElement;
+  text: string;
+};
+
+const SKIPPED_TAGS = new Set(['script', 'style', 'noscript', 'textarea', 'input', 'select', 'option', 'code', 'pre', 'kbd', 'samp']);
 
 export class SilentTranslator {
   private hoveredElement: Element | null = null;
   private translatedParagraphs = new Set<HTMLElement>();
+  private bilingualBlocks = new Map<HTMLElement, HTMLElement>();
+  private bilingualPageActive = false;
   private loadingIndicator: HTMLDivElement | null = null;
   private loadingParagraph: HTMLElement | null = null;
   private isTranslating = false;
@@ -27,7 +37,17 @@ export class SilentTranslator {
   async trigger(): Promise<void> {
     const settings = await this.getSettings();
     if (settings.silentMode === 'full-page') {
+      if (settings.silentDisplayMode === 'bilingual') {
+        await this.toggleBilingualPage(settings);
+        return;
+      }
+
       await this.pageTranslator.togglePageTranslation(false);
+      return;
+    }
+
+    if (settings.silentDisplayMode === 'bilingual') {
+      await this.toggleBilingualParagraph(settings);
       return;
     }
 
@@ -70,8 +90,20 @@ export class SilentTranslator {
     }
   }
 
+  isHoveredParagraphTranslated(): boolean {
+    this.pruneParagraphState();
+    const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
+    return Boolean(paragraph && (this.translatedParagraphs.has(paragraph) || this.bilingualBlocks.has(paragraph)));
+  }
+
+  hasBilingualPageTranslation(): boolean {
+    this.pruneParagraphState();
+    return this.bilingualPageActive && this.bilingualBlocks.size > 0;
+  }
+
   clearParagraphState(): void {
     this.translatedParagraphs.clear();
+    this.clearBilingualState();
     this.hideLoadingIndicator();
   }
 
@@ -81,6 +113,272 @@ export class SilentTranslator {
         this.translatedParagraphs.delete(paragraph);
       }
     });
+
+    this.bilingualBlocks.forEach((container, paragraph) => {
+      if (!paragraph.isConnected || !container.isConnected) {
+        container.remove();
+        this.bilingualBlocks.delete(paragraph);
+      }
+    });
+
+    if (!this.bilingualBlocks.size) {
+      this.bilingualPageActive = false;
+    }
+  }
+
+  private async toggleBilingualParagraph(settings: TranslationSettings): Promise<void> {
+    this.pruneParagraphState();
+    const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
+    if (!paragraph) {
+      this.pageTranslator.notifyTransient('Move your cursor over a paragraph or heading, then try silent translate again.');
+      return;
+    }
+
+    if (this.bilingualBlocks.has(paragraph)) {
+      this.restoreBilingualBlock(paragraph, true);
+      return;
+    }
+
+    if (this.isTranslating) {
+      this.pageTranslator.notifyTransient('A silent translation is already in progress for the current page.');
+      return;
+    }
+
+    const sourceText = this.getElementText(paragraph);
+    if (!sourceText) {
+      this.pageTranslator.notifyTransient('Nothing translatable found in the current block.', 'error');
+      return;
+    }
+
+    this.isTranslating = true;
+    this.showLoadingIndicator(paragraph);
+    try {
+      const translatedText = await this.translateText(sourceText, settings);
+      if (!translatedText || translatedText === sourceText) {
+        this.pageTranslator.notifyTransient('Translation finished, but the translated block matched the original text.', 'error');
+        return;
+      }
+
+      this.attachBilingualBlock(paragraph, translatedText, settings.targetLanguage);
+      this.pageTranslator.highlightElement(paragraph);
+      this.pageTranslator.notifyTransient('Block translated in bilingual view. Press the shortcut again to restore it.', 'success');
+    } catch (error: unknown) {
+      this.pageTranslator.notifyTransient(this.formatError(error), 'error');
+    } finally {
+      this.hideLoadingIndicator();
+      this.isTranslating = false;
+    }
+  }
+
+  private async toggleBilingualPage(settings: TranslationSettings): Promise<void> {
+    this.pruneParagraphState();
+
+    if (this.bilingualPageActive) {
+      this.clearBilingualState();
+      this.pageTranslator.notifyTransient('Original page restored.', 'success');
+      return;
+    }
+
+    if (this.isTranslating) {
+      this.pageTranslator.notifyTransient('A silent translation is already in progress for the current page.');
+      return;
+    }
+
+    const entries = this.collectPageTranslationEntries();
+    if (!entries.length) {
+      this.pageTranslator.notifyTransient('Nothing translatable found on this page.', 'error');
+      return;
+    }
+
+    this.isTranslating = true;
+    try {
+      const translatedTexts = await this.translateTexts(
+        entries.map((entry) => entry.text),
+        settings,
+      );
+
+      let appliedCount = 0;
+
+      entries.forEach((entry, index) => {
+        if (!entry.element.isConnected) {
+          return;
+        }
+
+        const translatedText = translatedTexts[index]?.trim();
+        if (!translatedText || translatedText === entry.text) {
+          return;
+        }
+
+        this.attachBilingualBlock(entry.element, translatedText, settings.targetLanguage);
+        appliedCount += 1;
+      });
+
+      this.bilingualPageActive = appliedCount > 0;
+      if (!appliedCount) {
+        this.pageTranslator.notifyTransient('Translation finished, but no visible bilingual blocks were added to the page.', 'error');
+        return;
+      }
+
+      this.pageTranslator.notifyTransient(`Page translated in bilingual view across ${appliedCount} block${appliedCount === 1 ? '' : 's'}.`, 'success');
+    } catch (error: unknown) {
+      this.pageTranslator.notifyTransient(this.formatError(error), 'error');
+    } finally {
+      this.isTranslating = false;
+    }
+  }
+
+  private restoreBilingualBlock(paragraph: HTMLElement, highlight = false, notify = true): void {
+    const container = this.bilingualBlocks.get(paragraph);
+    if (!container) {
+      return;
+    }
+
+    container.remove();
+    this.bilingualBlocks.delete(paragraph);
+    this.bilingualPageActive = this.bilingualPageActive && this.bilingualBlocks.size > 0;
+    if (highlight) {
+      this.pageTranslator.highlightElement(paragraph);
+    }
+    if (notify) {
+      this.pageTranslator.notifyTransient('Original text restored for the highlighted block.', 'success');
+    }
+  }
+
+  private attachBilingualBlock(paragraph: HTMLElement, translatedText: string, targetLanguage: string): void {
+    this.restoreBilingualBlock(paragraph, false, false);
+
+    const container = document.createElement('span');
+    container.className = 'silence-translator-bilingual-block';
+    container.dataset.silenceTranslatorUi = 'true';
+    container.setAttribute('data-silence-translator-ui', 'true');
+    container.lang = targetLanguage;
+    container.textContent = translatedText;
+
+    paragraph.appendChild(container);
+    this.bilingualBlocks.set(paragraph, container);
+  }
+
+  private clearBilingualState(): void {
+    this.bilingualBlocks.forEach((container) => container.remove());
+    this.bilingualBlocks.clear();
+    this.bilingualPageActive = false;
+  }
+
+  private collectPageTranslationEntries(): BlockTranslationEntry[] {
+    const candidates = new Set<HTMLElement>();
+
+    this.collectVisibleTextNodes(document.body).forEach((node) => {
+      const paragraph = this.pageTranslator.findParagraphCandidate(node.parentElement);
+      if (paragraph) {
+        candidates.add(paragraph);
+      }
+    });
+
+    return Array.from(candidates)
+      .map((element) => ({
+        element,
+        text: this.getElementText(element),
+      }))
+      .filter((entry) => entry.text.length > 0);
+  }
+
+  private collectVisibleTextNodes(root: ParentNode): Text[] {
+    const nodes: Text[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const text = node.nodeValue?.trim();
+        if (!text) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        const parent = node.parentElement;
+        if (!parent) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        if (parent.closest('[data-silence-translator-ui="true"]')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        if (parent.isContentEditable) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        if (SKIPPED_TAGS.has(parent.tagName.toLowerCase())) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        const style = window.getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        if (text.length < 2) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    let current = walker.nextNode();
+    while (current) {
+      nodes.push(current as Text);
+      current = walker.nextNode();
+    }
+
+    return nodes;
+  }
+
+  private getElementText(element: HTMLElement): string {
+    return element.innerText.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  private async translateText(text: string, settings: TranslationSettings): Promise<string> {
+    const translations = await this.translateTexts([text], settings);
+    return translations[0]?.trim() ?? '';
+  }
+
+  private async translateTexts(texts: string[], settings: TranslationSettings): Promise<string[]> {
+    const chunkSize = BATCH_SIZE[settings.defaultEngine];
+    const translatedTexts: string[] = [];
+
+    for (let index = 0; index < texts.length; index += chunkSize) {
+      const slice = texts.slice(index, index + chunkSize);
+      const response = (await chrome.runtime.sendMessage({
+        type: 'TRANSLATE_BATCH',
+        payload: {
+          texts: slice,
+          sourceLanguage: settings.sourceLanguage,
+          targetLanguage: settings.targetLanguage,
+          engine: settings.defaultEngine,
+        },
+      })) as TranslateBatchResponse & { error?: string };
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      if (response.translations.length !== slice.length) {
+        throw new Error(
+          `The ${settings.defaultEngine} engine returned ${response.translations.length} result${response.translations.length === 1 ? '' : 's'} for ${slice.length} text block${
+            slice.length === 1 ? '' : 's'
+          }. Nothing was written to the page.`,
+        );
+      }
+
+      translatedTexts.push(...response.translations.map((text) => text.trim()));
+    }
+
+    return translatedTexts;
+  }
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message;
+    }
+
+    return 'Translation failed. Please try again.';
   }
 
   private showLoadingIndicator(paragraph: HTMLElement): void {

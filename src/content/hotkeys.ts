@@ -26,9 +26,9 @@ export class HotkeyManager {
     const matchesPage = isHotkeyMatch(event, this.hotkeys.page);
     const matchesRestore = isHotkeyMatch(event, this.hotkeys.restore);
 
-    if (matchesRestore && this.actions.canRestore()) {
+    if (matchesSilent && matchesRestore && this.actions.canRestore()) {
       event.preventDefault();
-      this.actions.restore();
+      void this.actions.silent();
       return;
     }
 

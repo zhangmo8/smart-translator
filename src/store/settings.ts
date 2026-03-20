@@ -56,6 +56,7 @@ export function createDefaultSettings(browserLanguage = getBrowserLanguage()): T
     cacheEnabled: true,
     showSelectionIcon: true,
     silentMode: 'paragraph',
+    silentDisplayMode: 'translate-only',
     hotkeys: DEFAULT_HOTKEYS,
     engines: createDefaultEngineSettings(),
   };
