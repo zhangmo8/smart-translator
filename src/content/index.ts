@@ -7,6 +7,7 @@ import { HotkeyManager } from './hotkeys';
 
 import { getSettings } from '../store/settings';
 import { normalizeHotkey } from '../utils/hotkeys';
+import { setUILanguagePreference, t } from '../utils/i18n';
 import type { ContentMessage, TranslationSettings } from '../types';
 
 let currentSettings: TranslationSettings;
@@ -20,6 +21,7 @@ const settingsGetter = async (): Promise<TranslationSettings> => {
 
 async function initialize(): Promise<void> {
   currentSettings = await getSettings();
+  setUILanguagePreference(currentSettings.uiLanguage);
 
   const pageTranslator = new PageTranslator(settingsGetter);
   const selectionTranslator = new SelectionTranslator(settingsGetter);
@@ -76,6 +78,7 @@ async function initialize(): Promise<void> {
     }
 
     currentSettings = changes.settings.newValue as TranslationSettings;
+    setUILanguagePreference(currentSettings.uiLanguage);
     hotkeys.updateHotkeys(currentSettings.hotkeys);
     selectionTranslator.updateDisplaySettings(currentSettings.showSelectionIcon);
   });
@@ -123,7 +126,7 @@ async function initialize(): Promise<void> {
         }
       }
     })().catch((error: unknown) => {
-      sendResponse({ error: error instanceof Error ? error.message : 'Unknown error' });
+      sendResponse({ error: error instanceof Error ? error.message : t('unknownError') });
     });
 
     return true;

@@ -4,23 +4,23 @@ import { clearHistoryInRuntime, getHistoryFromRuntime, getSettingsFromRuntime, o
 import { applyTheme } from '../utils/theme';
 import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS, humanizeLanguage } from '../utils/languages';
 import { ENGINE_META, PROVIDER_ORDER } from '../utils/constants';
+import { setUILanguagePreference, t } from '../utils/i18n';
 import type { EngineCategory, EngineProvider, TranslationHistoryEntry, TranslationSettings } from '../types';
 
-const categoryLabels: Record<EngineCategory, string> = {
-  standard: 'Standard',
-  ai: 'AI',
-};
-
-const emptyResult = 'Translation output appears here. Use your current default engine or switch tabs to jump between standard APIs and AI providers.';
-
 export default function App() {
+  const categoryLabels: Record<EngineCategory, string> = {
+    standard: t('engineCategoryStandard'),
+    ai: t('engineCategoryAI'),
+  };
+  const emptyResult = t('outputPlaceholder');
+
   const [settings, setSettings] = useState<TranslationSettings | null>(null);
   const [engineCategory, setEngineCategory] = useState<EngineCategory>('standard');
   const [engine, setEngine] = useState<EngineProvider>('microsoft');
   const [sourceLanguage, setSourceLanguage] = useState('auto');
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [input, setInput] = useState('');
-  const [result, setResult] = useState(emptyResult);
+  const [result, setResult] = useState('');
   const [history, setHistory] = useState<TranslationHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,6 +29,7 @@ export default function App() {
   useEffect(() => {
     void (async () => {
       const [loadedSettings, loadedHistory] = await Promise.all([getSettingsFromRuntime(), getHistoryFromRuntime()]);
+      setUILanguagePreference(loadedSettings.uiLanguage);
       setSettings(loadedSettings);
       setEngine(loadedSettings.defaultEngine);
       setEngineCategory(ENGINE_META[loadedSettings.defaultEngine].category);
@@ -37,7 +38,7 @@ export default function App() {
       setHistory(loadedHistory);
       applyTheme(loadedSettings.theme);
     })().catch((runtimeError: unknown) => {
-      setError(runtimeError instanceof Error ? runtimeError.message : 'Failed to load extension state.');
+      setError(runtimeError instanceof Error ? runtimeError.message : t('loadingError'));
     });
   }, []);
 
@@ -71,7 +72,7 @@ export default function App() {
       setResult(response.translatedText);
       setHistory(await getHistoryFromRuntime());
     } catch (runtimeError) {
-      setError(runtimeError instanceof Error ? runtimeError.message : 'Translation failed.');
+      setError(runtimeError instanceof Error ? runtimeError.message : t('translationFailed'));
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ export default function App() {
     try {
       await updateSettingsInRuntime({ defaultEngine: nextEngine });
     } catch (runtimeError) {
-      setError(runtimeError instanceof Error ? runtimeError.message : 'Failed to update default engine.');
+      setError(runtimeError instanceof Error ? runtimeError.message : t('engineUpdateFailed'));
     }
   };
 
@@ -115,14 +116,14 @@ export default function App() {
         <div className="relative space-y-5">
           <header className="flex items-start justify-between gap-4">
             <div>
-              <div className="metric-chip inline-flex">silence-translator</div>
-              <h1 className="mt-3 font-display text-[28px] leading-none text-white">Translate with a single spark.</h1>
+              <div className="metric-chip inline-flex">{t('extName')}</div>
+              <h1 className="mt-3 font-display text-[28px] leading-none text-white">{t('appTagline')}</h1>
               <p className="mt-2 max-w-[28ch] text-sm text-slate-300">
-                Quick input, engine switching, and synced language preferences inside one polished cockpit.
+                {t('appSubtitle')}
               </p>
             </div>
             <button className="ghost-button shrink-0" onClick={() => void openOptionsInRuntime()}>
-              Settings
+              {t('settings')}
             </button>
           </header>
 
@@ -141,7 +142,7 @@ export default function App() {
 
           <section className="grid grid-cols-[1fr_auto_1fr] gap-3">
             <div>
-              <label className="soft-label">Source</label>
+              <label className="soft-label">{t('sourceLanguage')}</label>
               <select className="field" value={sourceLanguage} onChange={(event) => setSourceLanguage(event.target.value)}>
                 {[AUTO_LANGUAGE_OPTION, ...LANGUAGE_OPTIONS].map((language) => (
                   <option key={language.value} value={language.value}>
@@ -156,7 +157,7 @@ export default function App() {
               </button>
             </div>
             <div>
-              <label className="soft-label">Target</label>
+              <label className="soft-label">{t('targetLanguage')}</label>
               <select className="field" value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)}>
                 {LANGUAGE_OPTIONS.map((language) => (
                   <option key={language.value} value={language.value}>
@@ -169,7 +170,7 @@ export default function App() {
 
           <section className="grid gap-3">
             <div>
-              <label className="soft-label">Engine</label>
+              <label className="soft-label">{t('engine')}</label>
               <select className="field" value={engine} onChange={(event) => void handleEngineChange(event.target.value as EngineProvider)}>
                 {engines.map((provider) => (
                   <option key={provider} value={provider}>
@@ -180,10 +181,10 @@ export default function App() {
             </div>
 
             <div>
-              <label className="soft-label">Quick translate</label>
+              <label className="soft-label">{t('quickTranslate')}</label>
               <textarea
                 className="field min-h-[132px] resize-none"
-                placeholder="Paste or type anything — article snippet, chat, comment, or draft paragraph."
+                placeholder={t('inputPlaceholder')}
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
               />
@@ -191,10 +192,10 @@ export default function App() {
 
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs text-slate-400">
-                {settings ? `Default theme: ${settings.theme}. Popup tab: ${ENGINE_META[engine].label}.` : 'Loading preferences…'}
+                {settings ? `${t('theme')}: ${settings.theme}. ${ENGINE_META[engine].label}` : t('loadingSettings')}
               </div>
               <button className="pill-button" disabled={loading || !input.trim()} onClick={() => void handleTranslate()}>
-                {loading ? 'Translating…' : 'Translate'}
+                {loading ? t('translating') : t('translate')}
               </button>
             </div>
           </section>
@@ -202,13 +203,13 @@ export default function App() {
           <section className="glass-card border-white/5 bg-slate-950/35 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="soft-label">Output</div>
+                <div className="soft-label">{t('output')}</div>
                 <div className="text-xs text-slate-400">
                   {humanizeLanguage(sourceLanguage)} → {humanizeLanguage(targetLanguage)}
                 </div>
               </div>
               <button className="ghost-button px-3 py-1.5 text-xs" disabled={result === emptyResult} onClick={() => void handleCopy()}>
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? t('copied') : t('copy')}
               </button>
             </div>
             <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">{result}</div>
@@ -218,11 +219,11 @@ export default function App() {
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="soft-label">Recent history</div>
-                <div className="text-xs text-slate-400">Last 10 translations stored locally.</div>
+                <div className="soft-label">{t('recentHistory')}</div>
+                <div className="text-xs text-slate-400">{t('historyDescription')}</div>
               </div>
               <button className="ghost-button px-3 py-1.5 text-xs" onClick={() => void handleClearHistory()}>
-                Clear
+                {t('clear')}
               </button>
             </div>
 
@@ -250,7 +251,7 @@ export default function App() {
                   </button>
                 ))
               ) : (
-                <div className="glass-card rounded-[22px] p-4 text-sm text-slate-400">No translations yet. Your newest 10 results land here automatically.</div>
+                <div className="glass-card rounded-[22px] p-4 text-sm text-slate-400">{t('noHistory')}</div>
               )}
             </div>
           </section>

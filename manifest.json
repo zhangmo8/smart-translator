@@ -3,6 +3,7 @@
   "name": "silence-translator",
   "description": "A modern browser extension for instant translation across selections, pages, and inputs.",
   "version": "1.0.0",
+  "default_locale": "en",
   "minimum_chrome_version": "114",
   "permissions": [
     "activeTab",

@@ -1,0 +1,593 @@
+{
+  "extName": {
+    "message": "silence-translator"
+  },
+  "extDescription": {
+    "message": "A modern browser extension for instant translation across selections, pages, and inputs."
+  },
+  "commandTranslateSelection": {
+    "message": "Translate current selection or focused input"
+  },
+  "commandSilentTranslate": {
+    "message": "Run silent translate (paragraph/full page)"
+  },
+  "commandTogglePageTranslate": {
+    "message": "Translate or restore the full page"
+  },
+  "commandRestoreOriginal": {
+    "message": "Restore the original page text"
+  },
+  "appTagline": {
+    "message": "Translate with a single spark."
+  },
+  "appSubtitle": {
+    "message": "Quick input, engine switching, and synced language preferences inside one polished cockpit."
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "engineCategoryStandard": {
+    "message": "Standard"
+  },
+  "engineCategoryAI": {
+    "message": "AI"
+  },
+  "sourceLanguage": {
+    "message": "Source"
+  },
+  "targetLanguage": {
+    "message": "Target"
+  },
+  "engine": {
+    "message": "Engine"
+  },
+  "quickTranslate": {
+    "message": "Quick translate"
+  },
+  "inputPlaceholder": {
+    "message": "Paste or type anything — article snippet, chat, comment, or draft paragraph."
+  },
+  "translating": {
+    "message": "Translating…"
+  },
+  "translate": {
+    "message": "Translate"
+  },
+  "output": {
+    "message": "Output"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "outputPlaceholder": {
+    "message": "Translation output appears here. Use your current default engine or switch tabs to jump between standard APIs and AI providers."
+  },
+  "recentHistory": {
+    "message": "Recent history"
+  },
+  "historyDescription": {
+    "message": "Last 10 translations stored locally."
+  },
+  "clear": {
+    "message": "Clear"
+  },
+  "noHistory": {
+    "message": "No translations yet. Your newest 10 results land here automatically."
+  },
+  "loadingError": {
+    "message": "Failed to load extension state."
+  },
+  "translationFailed": {
+    "message": "Translation failed."
+  },
+  "engineUpdateFailed": {
+    "message": "Failed to update default engine."
+  },
+  "loadingSettings": {
+    "message": "Loading settings..."
+  },
+  "settingsLoaded": {
+    "message": "Settings loaded."
+  },
+  "savingPreferences": {
+    "message": "Saving preferences..."
+  },
+  "preferencesSynced": {
+    "message": "Preferences synced to chrome.storage.sync."
+  },
+  "draftResetPendingSave": {
+    "message": "Draft reset to defaults. Save when you're ready to apply it."
+  },
+  "reset": {
+    "message": "Reset"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "saving": {
+    "message": "Saving..."
+  },
+  "settingsTitle": {
+    "message": "Settings"
+  },
+  "languageBehavior": {
+    "message": "Language & Behavior"
+  },
+  "uiLanguage": {
+    "message": "Plugin language"
+  },
+  "uiLanguageAuto": {
+    "message": "Follow browser"
+  },
+  "uiLanguageEnglish": {
+    "message": "English"
+  },
+  "uiLanguageChineseSimplified": {
+    "message": "Chinese (Simplified)"
+  },
+  "defaultEngine": {
+    "message": "Default engine"
+  },
+  "theme": {
+    "message": "Theme"
+  },
+  "themeAuto": {
+    "message": "Auto"
+  },
+  "themeDark": {
+    "message": "Dark"
+  },
+  "themeLight": {
+    "message": "Light"
+  },
+  "silentTranslation": {
+    "message": "Silent translation"
+  },
+  "silentModeParagraph": {
+    "message": "Paragraph under cursor"
+  },
+  "silentModeFullPage": {
+    "message": "Full page"
+  },
+  "silentOutput": {
+    "message": "Silent output"
+  },
+  "silentOutputReplace": {
+    "message": "Replace"
+  },
+  "silentOutputBilingual": {
+    "message": "Bilingual"
+  },
+  "translationCache": {
+    "message": "Translation cache"
+  },
+  "cacheDescription": {
+    "message": "Store repeated translations locally"
+  },
+  "selectionIcon": {
+    "message": "Selection icon"
+  },
+  "selectionIconDescription": {
+    "message": "Show icon after selecting text"
+  },
+  "toggleOn": {
+    "message": "On"
+  },
+  "toggleOff": {
+    "message": "Off"
+  },
+  "keyboardShortcuts": {
+    "message": "Keyboard Shortcuts"
+  },
+  "hotkeySelection": {
+    "message": "Selection / input"
+  },
+  "hotkeySilent": {
+    "message": "Silent translate"
+  },
+  "hotkeyPage": {
+    "message": "Full page toggle"
+  },
+  "hotkeyRestore": {
+    "message": "Restore original"
+  },
+  "standardEngines": {
+    "message": "Standard Translation Engines"
+  },
+  "aiEngines": {
+    "message": "AI Translation Engines"
+  },
+  "providersCount": {
+    "message": "$COUNT$ providers",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "credentialRequired": {
+    "message": "Required"
+  },
+  "credentialOptional": {
+    "message": "Optional"
+  },
+  "selectionTranslator": {
+    "message": "Selection translator"
+  },
+  "readyToTranslate": {
+    "message": "Ready to translate"
+  },
+  "selectionReady": {
+    "message": "Selection ready"
+  },
+  "translatingSelection": {
+    "message": "Translating selection"
+  },
+  "translationReady": {
+    "message": "Translation ready"
+  },
+  "translationNeedsAttention": {
+    "message": "Translation needs attention"
+  },
+  "tryAgain": {
+    "message": "Try again"
+  },
+  "translateAgain": {
+    "message": "Translate again"
+  },
+  "keepSelectionTranslate": {
+    "message": "Keep the selection, then translate it inline."
+  },
+  "clickIconToTranslate": {
+    "message": "Click the icon to translate this selection."
+  },
+  "sendingToEngine": {
+    "message": "Sending your text to the current engine."
+  },
+  "translatingEllipsis": {
+    "message": "Translating..."
+  },
+  "translateSelection": {
+    "message": "Translate selection"
+  },
+  "openSettings": {
+    "message": "Open settings"
+  },
+  "readAloud": {
+    "message": "Read translation aloud"
+  },
+  "stopReading": {
+    "message": "Stop reading aloud"
+  },
+  "copyTranslation": {
+    "message": "Copy translation"
+  },
+  "close": {
+    "message": "Close"
+  },
+  "noTextToRead": {
+    "message": "No translated text to read yet."
+  },
+  "speechNotAvailable": {
+    "message": "Browser speech playback is not available on this page."
+  },
+  "readingAloud": {
+    "message": "Reading aloud."
+  },
+  "finishedReading": {
+    "message": "Finished reading."
+  },
+  "voicePlaybackFailed": {
+    "message": "Voice playback failed. Try another page or browser voice."
+  },
+  "voicePlaybackFailedGeneric": {
+    "message": "Voice playback failed. Please try again."
+  },
+  "readingStopped": {
+    "message": "Reading stopped."
+  },
+  "noTextToCopy": {
+    "message": "No translated text to copy yet."
+  },
+  "copiedToClipboard": {
+    "message": "Copied to clipboard."
+  },
+  "copyFailedGeneric": {
+    "message": "Copy failed. Please try again."
+  },
+  "copyFailedAccess": {
+    "message": "Copy failed. Clipboard access was rejected."
+  },
+  "translationFailedGeneric": {
+    "message": "Translation failed. Please try again."
+  },
+  "nothingTranslatablePage": {
+    "message": "Nothing translatable found on this page."
+  },
+  "scanningFragments": {
+    "message": "Scanning $COUNT$ text fragments...",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "translatedFragments": {
+    "message": "Translated $DONE$ / $TOTAL$ fragments",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "pageTranslatedPartial": {
+    "message": "Page translated with $COUNT$ updated fragments. $DETACHED$ fragment$PLURAL$ changed before write-back.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "detached": {
+        "content": "$2"
+      },
+      "plural": {
+        "content": "$3"
+      }
+    }
+  },
+  "pageTranslatedComplete": {
+    "message": "Page translated. Toggle original anytime."
+  },
+  "nothingTranslatableBlock": {
+    "message": "Nothing translatable found in the current block."
+  },
+  "blockTranslatedPartial": {
+    "message": "Block translated, but $COUNT$ text fragment$PLURAL$ changed before write-back.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockTranslatedComplete": {
+    "message": "Block translated. Press the shortcut again to restore it."
+  },
+  "originalBlockRestored": {
+    "message": "Original text restored for the highlighted block."
+  },
+  "originalPageRestored": {
+    "message": "Original page restored."
+  },
+  "showingOriginal": {
+    "message": "Showing original page text."
+  },
+  "showingTranslated": {
+    "message": "Showing translated page text."
+  },
+  "engineReturnedMismatch": {
+    "message": "The $ENGINE$ engine returned $RECEIVED$ result$PLURAL1$ for $EXPECTED$ text fragment$PLURAL2$. Nothing was written to the page.",
+    "placeholders": {
+      "engine": {
+        "content": "$1"
+      },
+      "received": {
+        "content": "$2"
+      },
+      "plural1": {
+        "content": "$3"
+      },
+      "expected": {
+        "content": "$4"
+      },
+      "plural2": {
+        "content": "$5"
+      }
+    }
+  },
+  "receivedMismatchNode": {
+    "message": "Received $RECEIVED$ translated fragment$PLURAL1$ for $EXPECTED$ DOM text node$PLURAL2$. The page was left unchanged.",
+    "placeholders": {
+      "received": {
+        "content": "$1"
+      },
+      "plural1": {
+        "content": "$2"
+      },
+      "expected": {
+        "content": "$3"
+      },
+      "plural2": {
+        "content": "$4"
+      }
+    }
+  },
+  "missingTranslatedFragment": {
+    "message": "Missing translated text for fragment $INDEX$.",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      }
+    }
+  },
+  "detectedLanguages": {
+    "message": "Detected $SOURCE$ → $TARGET$",
+    "placeholders": {
+      "source": {
+        "content": "$1"
+      },
+      "target": {
+        "content": "$2"
+      }
+    }
+  },
+  "updatedBeforeWriteback": {
+    "message": "Translation finished, but the $SUBJECT$ updated before the result could be written to the DOM. Try again once it settles.",
+    "placeholders": {
+      "subject": {
+        "content": "$1"
+      }
+    }
+  },
+  "translatedMatchedOriginal": {
+    "message": "Translation finished, but the translated $SCOPE$ matched the current DOM, so nothing changed visibly.",
+    "placeholders": {
+      "scope": {
+        "content": "$1"
+      }
+    }
+  },
+  "noVisibleUpdate": {
+    "message": "Translation finished, but no visible DOM update was applied to this $SUBJECT$.",
+    "placeholders": {
+      "subject": {
+        "content": "$1"
+      }
+    }
+  },
+  "silenceTranslatorBar": {
+    "message": "silence-translator"
+  },
+  "barReady": {
+    "message": "Ready to translate"
+  },
+  "barShowOriginal": {
+    "message": "Show original"
+  },
+  "barRestore": {
+    "message": "Restore"
+  },
+  "moveCursorForSilent": {
+    "message": "Move your cursor over a paragraph or heading, then try silent translate again."
+  },
+  "silentInProgress": {
+    "message": "A silent translation is already in progress for the current page."
+  },
+  "bilingualBlockRestored": {
+    "message": "Original text restored for the highlighted block."
+  },
+  "bilingualBlockTranslated": {
+    "message": "Block translated in bilingual view. Press the shortcut again to restore it."
+  },
+  "translatedMatchedOriginalBlock": {
+    "message": "Translation finished, but the translated block matched the original text."
+  },
+  "bilingualPageRestored": {
+    "message": "Original page restored."
+  },
+  "noBilingualBlocks": {
+    "message": "Translation finished, but no visible bilingual blocks were added to the page."
+  },
+  "bilingualPageTranslated": {
+    "message": "Page translated in bilingual view across $COUNT$ block$PLURAL$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "engineReturnedMismatchBlock": {
+    "message": "The $ENGINE$ engine returned $RECEIVED$ result$PLURAL1$ for $EXPECTED$ text block$PLURAL2$. Nothing was written to the page.",
+    "placeholders": {
+      "engine": {
+        "content": "$1"
+      },
+      "received": {
+        "content": "$2"
+      },
+      "plural1": {
+        "content": "$3"
+      },
+      "expected": {
+        "content": "$4"
+      },
+      "plural2": {
+        "content": "$5"
+      }
+    }
+  },
+  "translatingInline": {
+    "message": "Translating..."
+  },
+  "apiKey": {
+    "message": "API key"
+  },
+  "apiSecret": {
+    "message": "API secret"
+  },
+  "region": {
+    "message": "Region"
+  },
+  "apiUrl": {
+    "message": "API URL"
+  },
+  "endpoint": {
+    "message": "Endpoint"
+  },
+  "model": {
+    "message": "Model"
+  },
+  "systemPrompt": {
+    "message": "System prompt"
+  },
+  "systemPromptPlaceholder": {
+    "message": "Optional provider-specific translation system prompt"
+  },
+  "fieldRequired": {
+    "message": "Required"
+  },
+  "fieldOptional": {
+    "message": "Optional"
+  },
+  "unknownError": {
+    "message": "Unknown error"
+  },
+  "contextMenuTranslateSelection": {
+    "message": "Translate selection"
+  },
+  "contextMenuTranslatePage": {
+    "message": "Translate full page"
+  },
+  "contextMenuSilentMode": {
+    "message": "Silent translate mode"
+  },
+  "contextMenuSilentParagraph": {
+    "message": "Paragraph under cursor"
+  },
+  "contextMenuSilentFullPage": {
+    "message": "Full page"
+  },
+  "contextMenuOpenSettings": {
+    "message": "Open silence-translator settings"
+  },
+  "apiKeyDefault": {
+    "message": "API key"
+  },
+  "apiSecretDefault": {
+    "message": "API secret"
+  },
+  "regionDefault": {
+    "message": "Region"
+  },
+  "engineNotConfigured": {
+    "message": "$ENGINE$ is not configured yet. Add $FIELDS$ in Settings, then try again.",
+    "placeholders": {
+      "engine": {
+        "content": "$1"
+      },
+      "fields": {
+        "content": "$2"
+      }
+    }
+  }
+}

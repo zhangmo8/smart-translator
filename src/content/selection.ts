@@ -1,6 +1,7 @@
 import type { TranslateResponse, TranslationSettings } from '../types';
 import { isEditableElement } from '../utils/hotkeys';
 import { normalizeLanguageCode } from '../utils/languages';
+import { t } from '../utils/i18n';
 
 type SettingsGetter = () => Promise<TranslationSettings>;
 
@@ -182,7 +183,7 @@ export class SelectionTranslator {
 
       return response.translatedText;
     } catch (error: unknown) {
-      this.showResult(error instanceof Error ? error.message : 'Translation failed. Please try again.', true);
+      this.showResult(error instanceof Error ? error.message : t('translationFailedGeneric'), true);
       return null;
     } finally {
       this.isTranslating = false;
@@ -306,34 +307,34 @@ export class SelectionTranslator {
     tooltip.dataset.state = 'icon';
     tooltip.dataset.tone = 'default';
     tooltip.innerHTML = `
-      <button class="silence-translator-selection-trigger" type="button" data-role="trigger" aria-label="Translate selection">
+      <button class="silence-translator-selection-trigger" type="button" data-role="trigger" aria-label="${t('translateSelection')}">
         <img class="silence-translator-selection-trigger__logo" src="${iconUrl}" alt="" draggable="false" />
       </button>
       <div class="silence-translator-tooltip__shell">
         <div class="silence-translator-tooltip__header">
           <div>
-            <div class="silence-translator-tooltip__eyebrow">Selection translator</div>
-            <div class="silence-translator-tooltip__title" data-role="title">Ready to translate</div>
+            <div class="silence-translator-tooltip__eyebrow">${t('selectionTranslator')}</div>
+            <div class="silence-translator-tooltip__title" data-role="title">${t('readyToTranslate')}</div>
           </div>
           <div class="silence-translator-tooltip__header-actions">
-            <button class="silence-translator-icon-button silence-translator-tooltip__action" type="button" data-role="speak" aria-label="Read translation aloud" title="Read translation aloud">
+            <button class="silence-translator-icon-button silence-translator-tooltip__action" type="button" data-role="speak" aria-label="${t('readAloud')}" title="${t('readAloud')}">
               ${SPEAK_ICON}
             </button>
-            <button class="silence-translator-icon-button silence-translator-tooltip__action" type="button" data-role="copy" aria-label="Copy translation" title="Copy translation">
+            <button class="silence-translator-icon-button silence-translator-tooltip__action" type="button" data-role="copy" aria-label="${t('copyTranslation')}" title="${t('copyTranslation')}">
               ${COPY_ICON}
             </button>
-            <button class="silence-translator-icon-button" type="button" data-role="close" aria-label="Close" title="Close">x</button>
+            <button class="silence-translator-icon-button" type="button" data-role="close" aria-label="${t('close')}" title="${t('close')}">x</button>
           </div>
         </div>
         <div class="silence-translator-tooltip__body">
           <div class="silence-translator-tooltip__text" data-role="result">
-            Keep the selection, then translate it inline.
+            ${t('keepSelectionTranslate')}
           </div>
         </div>
         <div class="silence-translator-tooltip__status" data-role="utility-status" aria-live="polite" hidden></div>
         <div class="silence-translator-tooltip__footer">
-          <button class="silence-translator-button" type="button" data-role="translate">Translate selection</button>
-          <button class="silence-translator-button silence-translator-button--ghost" type="button" data-role="settings" hidden>Open settings</button>
+          <button class="silence-translator-button" type="button" data-role="translate">${t('translateSelection')}</button>
+          <button class="silence-translator-button silence-translator-button--ghost" type="button" data-role="settings" hidden>${t('openSettings')}</button>
         </div>
       </div>
     `.trim();
@@ -446,10 +447,10 @@ export class SelectionTranslator {
     this.clearUtilityStatus();
     this.tooltip.dataset.state = 'icon';
     this.tooltip.dataset.tone = 'default';
-    this.titleNode.textContent = 'Selection ready';
-    this.resultNode.textContent = 'Click the icon to translate this selection.';
+    this.titleNode.textContent = t('selectionReady');
+    this.resultNode.textContent = t('clickIconToTranslate');
     this.resultNode.classList.remove('silence-translator-tooltip__text--error');
-    this.translateButton.textContent = 'Translate again';
+    this.translateButton.textContent = t('translateAgain');
     this.translateButton.disabled = false;
     if (this.settingsButton) {
       this.settingsButton.hidden = true;
@@ -471,10 +472,10 @@ export class SelectionTranslator {
     this.isTranslating = true;
     this.tooltip.dataset.state = 'loading';
     this.tooltip.dataset.tone = 'default';
-    this.titleNode.textContent = 'Translating selection';
-    this.resultNode.textContent = 'Sending your text to the current engine.';
+    this.titleNode.textContent = t('translatingSelection');
+    this.resultNode.textContent = t('sendingToEngine');
     this.resultNode.classList.remove('silence-translator-tooltip__text--error');
-    this.translateButton.textContent = 'Translating...';
+    this.translateButton.textContent = t('translatingEllipsis');
     this.translateButton.disabled = true;
     if (this.settingsButton) {
       this.settingsButton.hidden = true;
@@ -496,10 +497,10 @@ export class SelectionTranslator {
     this.translatedText = isError ? '' : text;
     this.tooltip.dataset.state = isError ? 'error' : 'result';
     this.tooltip.dataset.tone = isError ? 'error' : 'success';
-    this.titleNode.textContent = isError ? 'Translation needs attention' : 'Translation ready';
+    this.titleNode.textContent = isError ? t('translationNeedsAttention') : t('translationReady');
     this.resultNode.textContent = text;
     this.resultNode.classList.toggle('silence-translator-tooltip__text--error', isError);
-    this.translateButton.textContent = isError ? 'Try again' : 'Translate again';
+    this.translateButton.textContent = isError ? t('tryAgain') : t('translateAgain');
     this.translateButton.disabled = false;
 
     if (this.settingsButton) {
@@ -522,15 +523,15 @@ export class SelectionTranslator {
       this.speakButton.disabled = !canSpeak;
       this.speakButton.dataset.state = this.isSpeaking ? 'active' : 'idle';
       this.speakButton.innerHTML = this.isSpeaking ? STOP_ICON : SPEAK_ICON;
-      this.speakButton.setAttribute('aria-label', this.isSpeaking ? 'Stop reading aloud' : 'Read translation aloud');
-      this.speakButton.title = this.isSpeaking ? 'Stop reading aloud' : 'Read translation aloud';
+      this.speakButton.setAttribute('aria-label', this.isSpeaking ? t('stopReading') : t('readAloud'));
+      this.speakButton.title = this.isSpeaking ? t('stopReading') : t('readAloud');
     }
 
     if (this.copyButton) {
       this.copyButton.disabled = !hasResult;
       this.copyButton.innerHTML = COPY_ICON;
-      this.copyButton.setAttribute('aria-label', 'Copy translation');
-      this.copyButton.title = 'Copy translation';
+      this.copyButton.setAttribute('aria-label', t('copyTranslation'));
+      this.copyButton.title = t('copyTranslation');
     }
   }
 
@@ -541,18 +542,18 @@ export class SelectionTranslator {
     }
 
     if (this.tooltip?.dataset.state !== 'result') {
-      this.showUtilityStatus('No translated text to read yet.', true);
+      this.showUtilityStatus(t('noTextToRead'), true);
       return;
     }
 
     const textToSpeak = this.getResultText();
     if (!textToSpeak) {
-      this.showUtilityStatus('No translated text to read yet.', true);
+      this.showUtilityStatus(t('noTextToRead'), true);
       return;
     }
 
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      this.showUtilityStatus('Browser speech playback is not available on this page.', true);
+      this.showUtilityStatus(t('speechNotAvailable'), true);
       return;
     }
 
@@ -580,7 +581,7 @@ export class SelectionTranslator {
           return;
         }
 
-        this.showUtilityStatus('Reading aloud.');
+        this.showUtilityStatus(t('readingAloud'));
       };
 
       utterance.onend = () => {
@@ -591,7 +592,7 @@ export class SelectionTranslator {
         this.currentUtterance = null;
         this.isSpeaking = false;
         this.updateUtilityButtons();
-        this.showUtilityStatus('Finished reading.');
+        this.showUtilityStatus(t('finishedReading'));
       };
 
       utterance.onerror = () => {
@@ -602,7 +603,7 @@ export class SelectionTranslator {
         this.currentUtterance = null;
         this.isSpeaking = false;
         this.updateUtilityButtons();
-        this.showUtilityStatus('Voice playback failed. Try another page or browser voice.', true);
+        this.showUtilityStatus(t('voicePlaybackFailed'), true);
       };
 
       window.speechSynthesis.cancel();
@@ -619,7 +620,7 @@ export class SelectionTranslator {
       this.currentUtterance = null;
       this.isSpeaking = false;
       this.updateUtilityButtons();
-      this.showUtilityStatus(error instanceof Error ? error.message : 'Voice playback failed. Please try again.', true);
+      this.showUtilityStatus(error instanceof Error ? error.message : t('voicePlaybackFailedGeneric'), true);
     }
   };
 
@@ -633,27 +634,27 @@ export class SelectionTranslator {
     this.isSpeaking = false;
     this.updateUtilityButtons();
     if (!silent) {
-      this.showUtilityStatus('Reading stopped.');
+      this.showUtilityStatus(t('readingStopped'));
     }
   }
 
   private copyTranslatedText = async (): Promise<void> => {
     if (this.tooltip?.dataset.state !== 'result') {
-      this.showUtilityStatus('No translated text to copy yet.', true);
+      this.showUtilityStatus(t('noTextToCopy'), true);
       return;
     }
 
     const textToCopy = this.getResultText();
     if (!textToCopy) {
-      this.showUtilityStatus('No translated text to copy yet.', true);
+      this.showUtilityStatus(t('noTextToCopy'), true);
       return;
     }
 
     try {
       await this.copyText(textToCopy);
-      this.showUtilityStatus('Copied to clipboard.');
+      this.showUtilityStatus(t('copiedToClipboard'));
     } catch (error: unknown) {
-      this.showUtilityStatus(error instanceof Error ? error.message : 'Copy failed. Please try again.', true);
+      this.showUtilityStatus(error instanceof Error ? error.message : t('copyFailedGeneric'), true);
     }
   };
 
@@ -667,7 +668,7 @@ export class SelectionTranslator {
       return;
     }
 
-    throw new Error('Copy failed. Clipboard access was rejected.');
+    throw new Error(t('copyFailedAccess'));
   };
 
   private copyWithExecCommand(text: string): boolean {

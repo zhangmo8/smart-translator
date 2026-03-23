@@ -1,0 +1,794 @@
+{
+  "extName": {
+    "message": "静默翻译"
+  },
+  "extDescription": {
+    "message": "现代化的浏览器翻译扩展，支持选中翻译、整页翻译和输入框翻译。"
+  },
+  "commandTranslateSelection": {
+    "message": "翻译当前选中内容或聚焦的输入框"
+  },
+  "commandSilentTranslate": {
+    "message": "运行静默翻译（段落/整页）"
+  },
+  "commandTogglePageTranslate": {
+    "message": "翻译或恢复整个页面"
+  },
+  "commandRestoreOriginal": {
+    "message": "恢复原始页面文本"
+  },
+  "appTagline": {
+    "message": "一键翻译。"
+  },
+  "appSubtitle": {
+    "message": "快速输入、引擎切换、语言偏好同步，一站式翻译控制面板。"
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "engineCategoryStandard": {
+    "message": "标准"
+  },
+  "engineCategoryAI": {
+    "message": "AI"
+  },
+  "sourceLanguage": {
+    "message": "源语言"
+  },
+  "targetLanguage": {
+    "message": "目标语言"
+  },
+  "engine": {
+    "message": "引擎"
+  },
+  "quickTranslate": {
+    "message": "快速翻译"
+  },
+  "inputPlaceholder": {
+    "message": "粘贴或输入任何内容——文章片段、聊天记录、评论或草稿段落。"
+  },
+  "translating": {
+    "message": "翻译中…"
+  },
+  "translate": {
+    "message": "翻译"
+  },
+  "output": {
+    "message": "输出"
+  },
+  "copied": {
+    "message": "已复制"
+  },
+  "copy": {
+    "message": "复制"
+  },
+  "outputPlaceholder": {
+    "message": "翻译结果将显示在这里。使用当前默认引擎或切换标签页在标准 API 和 AI 提供商之间切换。"
+  },
+  "recentHistory": {
+    "message": "最近历史"
+  },
+  "historyDescription": {
+    "message": "最近 10 条翻译本地存储。"
+  },
+  "clear": {
+    "message": "清除"
+  },
+  "noHistory": {
+    "message": "暂无翻译记录。最新的 10 条结果将自动出现在这里。"
+  },
+  "loadingError": {
+    "message": "加载扩展状态失败。"
+  },
+  "translationFailed": {
+    "message": "翻译失败。"
+  },
+  "engineUpdateFailed": {
+    "message": "更新默认引擎失败。"
+  },
+  "loadingSettings": {
+    "message": "加载设置中..."
+  },
+  "settingsLoaded": {
+    "message": "设置已加载。"
+  },
+  "savingPreferences": {
+    "message": "保存设置中..."
+  },
+  "preferencesSynced": {
+    "message": "设置已同步到 chrome.storage.sync。"
+  },
+  "draftResetPendingSave": {
+    "message": "草稿已重置为默认值，保存后生效。"
+  },
+  "reset": {
+    "message": "重置"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "saving": {
+    "message": "保存中..."
+  },
+  "settingsTitle": {
+    "message": "设置"
+  },
+  "languageBehavior": {
+    "message": "语言与行为"
+  },
+  "uiLanguage": {
+    "message": "插件语言"
+  },
+  "uiLanguageAuto": {
+    "message": "跟随浏览器"
+  },
+  "uiLanguageEnglish": {
+    "message": "英文"
+  },
+  "uiLanguageChineseSimplified": {
+    "message": "简体中文"
+  },
+  "defaultEngine": {
+    "message": "默认引擎"
+  },
+  "theme": {
+    "message": "主题"
+  },
+  "themeAuto": {
+    "message": "自动"
+  },
+  "themeDark": {
+    "message": "深色"
+  },
+  "themeLight": {
+    "message": "浅色"
+  },
+  "silentTranslation": {
+    "message": "静默翻译"
+  },
+  "silentModeParagraph": {
+    "message": "光标下的段落"
+  },
+  "silentModeFullPage": {
+    "message": "整个页面"
+  },
+  "silentOutput": {
+    "message": "静默输出"
+  },
+  "silentOutputReplace": {
+    "message": "替换"
+  },
+  "silentOutputBilingual": {
+    "message": "双语"
+  },
+  "translationCache": {
+    "message": "翻译缓存"
+  },
+  "cacheDescription": {
+    "message": "本地存储重复的翻译"
+  },
+  "selectionIcon": {
+    "message": "选择图标"
+  },
+  "selectionIconDescription": {
+    "message": "选中文本后显示图标"
+  },
+  "toggleOn": {
+    "message": "开"
+  },
+  "toggleOff": {
+    "message": "关"
+  },
+  "keyboardShortcuts": {
+    "message": "键盘快捷键"
+  },
+  "hotkeySelection": {
+    "message": "选中内容 / 输入框"
+  },
+  "hotkeySilent": {
+    "message": "静默翻译"
+  },
+  "hotkeyPage": {
+    "message": "整页切换"
+  },
+  "hotkeyRestore": {
+    "message": "恢复原文"
+  },
+  "standardEngines": {
+    "message": "标准翻译引擎"
+  },
+  "aiEngines": {
+    "message": "AI 翻译引擎"
+  },
+  "providersCount": {
+    "message": "$COUNT$ 个提供商",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "credentialRequired": {
+    "message": "必填"
+  },
+  "credentialOptional": {
+    "message": "可选"
+  },
+  "selectionTranslator": {
+    "message": "划词翻译"
+  },
+  "readyToTranslate": {
+    "message": "准备翻译"
+  },
+  "selectionReady": {
+    "message": "选中内容就绪"
+  },
+  "translatingSelection": {
+    "message": "正在翻译选中内容"
+  },
+  "translationReady": {
+    "message": "翻译结果已就绪"
+  },
+  "translationNeedsAttention": {
+    "message": "翻译需要注意"
+  },
+  "tryAgain": {
+    "message": "重试"
+  },
+  "translateAgain": {
+    "message": "再次翻译"
+  },
+  "keepSelectionTranslate": {
+    "message": "保持选中状态，然后进行翻译。"
+  },
+  "clickIconToTranslate": {
+    "message": "点击图标翻译此选中内容。"
+  },
+  "sendingToEngine": {
+    "message": "正在将您的文本发送到当前引擎。"
+  },
+  "translatingEllipsis": {
+    "message": "翻译中..."
+  },
+  "translateSelection": {
+    "message": "翻译选中内容"
+  },
+  "openSettings": {
+    "message": "打开设置"
+  },
+  "readAloud": {
+    "message": "朗读译文"
+  },
+  "stopReading": {
+    "message": "停止朗读"
+  },
+  "copyTranslation": {
+    "message": "复制译文"
+  },
+  "close": {
+    "message": "关闭"
+  },
+  "noTextToRead": {
+    "message": "暂无可朗读的译文。"
+  },
+  "speechNotAvailable": {
+    "message": "浏览器语音播放功能在此页面不可用。"
+  },
+  "readingAloud": {
+    "message": "正在朗读。"
+  },
+  "finishedReading": {
+    "message": "朗读完成。"
+  },
+  "voicePlaybackFailed": {
+    "message": "语音播放失败。请尝试其他页面或浏览器语音。"
+  },
+  "voicePlaybackFailedGeneric": {
+    "message": "语音播放失败。请重试。"
+  },
+  "readingStopped": {
+    "message": "已停止朗读。"
+  },
+  "noTextToCopy": {
+    "message": "暂无可复制的译文。"
+  },
+  "copiedToClipboard": {
+    "message": "已复制到剪贴板。"
+  },
+  "copyFailedGeneric": {
+    "message": "复制失败。请重试。"
+  },
+  "copyFailedAccess": {
+    "message": "复制失败。剪贴板访问被拒绝。"
+  },
+  "translationFailedGeneric": {
+    "message": "翻译失败。请重试。"
+  },
+  "nothingTranslatablePage": {
+    "message": "此页面未找到可翻译内容。"
+  },
+  "scanningFragments": {
+    "message": "正在扫描 $COUNT$ 个文本片段...",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "translatedFragments": {
+    "message": "已翻译 $DONE$ / $TOTAL$ 个片段",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "pageTranslatedPartial": {
+    "message": "页面已翻译，更新了 $COUNT$ 个片段。$DETACHED$ 个片段在写回前发生变化。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "detached": {
+        "content": "$2"
+      },
+      "plural": {
+        "content": "$3"
+      }
+    }
+  },
+  "pageTranslatedComplete": {
+    "message": "页面已翻译。随时切换原文。"
+  },
+  "nothingTranslatableBlock": {
+    "message": "当前区块未找到可翻译内容。"
+  },
+  "blockTranslatedPartial": {
+    "message": "区块已翻译，但 $COUNT$ 个文本片段在写回前发生变化。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockTranslatedComplete": {
+    "message": "区块已翻译。再次按快捷键可恢复。"
+  },
+  "originalBlockRestored": {
+    "message": "已恢复高亮区块的原文。"
+  },
+  "originalPageRestored": {
+    "message": "已恢复页面原文。"
+  },
+  "showingOriginal": {
+    "message": "正在显示页面原文。"
+  },
+  "showingTranslated": {
+    "message": "正在显示翻译文本。"
+  },
+  "engineReturnedMismatch": {
+    "message": "$ENGINE$ 引擎对 $EXPECTED$ 个文本片段返回了 $RECEIVED$ 个结果。未写入页面。",
+    "placeholders": {
+      "engine": {
+        "content": "$1"
+      },
+      "received": {
+        "content": "$2"
+      },
+      "plural1": {
+        "content": "$3"
+      },
+      "expected": {
+        "content": "$4"
+      },
+      "plural2": {
+        "content": "$5"
+      }
+    }
+  },
+  "receivedMismatchNode": {
+    "message": "收到 $RECEIVED$ 个翻译片段，但需要 $EXPECTED$ 个 DOM 文本节点。页面保持不变。",
+    "placeholders": {
+      "received": {
+        "content": "$1"
+      },
+      "plural1": {
+        "content": "$2"
+      },
+      "expected": {
+        "content": "$3"
+      },
+      "plural2": {
+        "content": "$4"
+      }
+    }
+  },
+  "missingTranslatedFragment": {
+    "message": "片段 $INDEX$ 缺少翻译文本。",
+    "placeholders": {
+      "index": {
+        "content": "$1"
+      }
+    }
+  },
+  "detectedLanguages": {
+    "message": "检测到 $SOURCE$ → $TARGET$",
+    "placeholders": {
+      "source": {
+        "content": "$1"
+      },
+      "target": {
+        "content": "$2"
+      }
+    }
+  },
+  "updatedBeforeWriteback": {
+    "message": "翻译已完成，但 $SUBJECT$ 在结果写入 DOM 前已更新。请在其稳定后重试。",
+    "placeholders": {
+      "subject": {
+        "content": "$1"
+      }
+    }
+  },
+  "translatedMatchedOriginal": {
+    "message": "翻译已完成，但翻译后的 $SCOPE$ 与当前 DOM 一致，无可见变化。",
+    "placeholders": {
+      "scope": {
+        "content": "$1"
+      }
+    }
+  },
+  "noVisibleUpdate": {
+    "message": "翻译已完成，但未对此 $SUBJECT$ 应用可见的 DOM 更新。",
+    "placeholders": {
+      "subject": {
+        "content": "$1"
+      }
+    }
+  },
+  "silenceTranslatorBar": {
+    "message": "静默翻译"
+  },
+  "barReady": {
+    "message": "准备翻译"
+  },
+  "barShowOriginal": {
+    "message": "显示原文"
+  },
+  "barRestore": {
+    "message": "恢复"
+  },
+  "moveCursorForSilent": {
+    "message": "将光标移至段落或标题上，然后再次尝试静默翻译。"
+  },
+  "silentInProgress": {
+    "message": "当前页面正在进行静默翻译。"
+  },
+  "bilingualBlockRestored": {
+    "message": "已恢复高亮区块的原文。"
+  },
+  "bilingualBlockTranslated": {
+    "message": "区块已在双语视图中翻译。再次按快捷键可恢复。"
+  },
+  "translatedMatchedOriginalBlock": {
+    "message": "翻译已完成，但翻译后的区块与原文一致。"
+  },
+  "bilingualPageRestored": {
+    "message": "已恢复页面原文。"
+  },
+  "noBilingualBlocks": {
+    "message": "翻译已完成，但未向页面添加可见的双语区块。"
+  },
+  "bilingualPageTranslated": {
+    "message": "页面已在双语视图中翻译，共 $COUNT$ 个区块。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "engineReturnedMismatchBlock": {
+    "message": "$ENGINE$ 引擎对 $EXPECTED$ 个文本区块返回了 $RECEIVED$ 个结果。未写入页面。",
+    "placeholders": {
+      "engine": {
+        "content": "$1"
+      },
+      "received": {
+        "content": "$2"
+      },
+      "plural1": {
+        "content": "$3"
+      },
+      "expected": {
+        "content": "$4"
+      },
+      "plural2": {
+        "content": "$5"
+      }
+    }
+  },
+  "translatingInline": {
+    "message": "翻译中..."
+  },
+  "apiKey": {
+    "message": "API 密钥"
+  },
+  "apiSecret": {
+    "message": "API 密钥"
+  },
+  "region": {
+    "message": "区域"
+  },
+  "apiUrl": {
+    "message": "API 地址"
+  },
+  "endpoint": {
+    "message": "端点"
+  },
+  "model": {
+    "message": "模型"
+  },
+  "systemPrompt": {
+    "message": "系统提示词"
+  },
+  "systemPromptPlaceholder": {
+    "message": "可选的提供商特定翻译系统提示词"
+  },
+  "fieldRequired": {
+    "message": "必填"
+  },
+  "fieldOptional": {
+    "message": "可选"
+  },
+  "selectionTranslate": {
+    "message": "翻译选中内容"
+  },
+  "selectionTranslator": {
+    "message": "选中内容翻译器"
+  },
+  "readyToTranslate": {
+    "message": "准备翻译"
+  },
+  "clickToTranslate": {
+    "message": "点击图标翻译选中内容。"
+  },
+  "translateAgain": {
+    "message": "再次翻译"
+  },
+  "translatingSelection": {
+    "message": "翻译选中内容中"
+  },
+  "sendingToEngine": {
+    "message": "正在将文本发送到当前引擎。"
+  },
+  "translationReady": {
+    "message": "翻译完成"
+  },
+  "translationNeedsAttention": {
+    "message": "翻译需要注意"
+  },
+  "tryAgain": {
+    "message": "重试"
+  },
+  "selectionReady": {
+    "message": "选中内容已准备好"
+  },
+  "keepSelection": {
+    "message": "保持选中，然后内联翻译。"
+  },
+  "readAloud": {
+    "message": "朗读翻译"
+  },
+  "stopReading": {
+    "message": "停止朗读"
+  },
+  "copyTranslation": {
+    "message": "复制翻译"
+  },
+  "close": {
+    "message": "关闭"
+  },
+  "openSettings": {
+    "message": "打开设置"
+  },
+  "noTextToRead": {
+    "message": "还没有可朗读的翻译文本。"
+  },
+  "speechNotAvailable": {
+    "message": "此页面不支持浏览器语音播放。"
+  },
+  "readingAloud": {
+    "message": "正在朗读。"
+  },
+  "finishedReading": {
+    "message": "朗读完成。"
+  },
+  "voicePlaybackFailed": {
+    "message": "语音播放失败。请尝试其他页面或浏览器语音。"
+  },
+  "voicePlaybackFailedRetry": {
+    "message": "语音播放失败。请重试。"
+  },
+  "noTextToCopy": {
+    "message": "还没有可复制的翻译文本。"
+  },
+  "copiedToClipboard": {
+    "message": "已复制到剪贴板。"
+  },
+  "copyFailed": {
+    "message": "复制失败。请重试。"
+  },
+  "copyRejected": {
+    "message": "复制失败。剪贴板访问被拒绝。"
+  },
+  "readingStopped": {
+    "message": "朗读已停止。"
+  },
+  "pageReadyToTranslate": {
+    "message": "准备翻译"
+  },
+  "showOriginal": {
+    "message": "显示原文"
+  },
+  "showTranslation": {
+    "message": "显示翻译"
+  },
+  "restore": {
+    "message": "恢复"
+  },
+  "scanningFragments": {
+    "message": "正在扫描 $COUNT$ 个文本片段...",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "translatedProgress": {
+    "message": "已翻译 $DONE$ / $TOTAL$ 个片段",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "nothingTranslatable": {
+    "message": "此页面上没有可翻译的内容。"
+  },
+  "nothingTranslatableBlock": {
+    "message": "当前块中没有可翻译的内容。"
+  },
+  "pageTranslated": {
+    "message": "页面已翻译，更新了 $COUNT$ 个片段。$DETACHED$ 个片段在写回前已更改。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "detached": {
+        "content": "$2"
+      },
+      "plural": {
+        "content": "$3"
+      }
+    }
+  },
+  "pageTranslatedSuccess": {
+    "message": "页面已翻译。随时切换原文。"
+  },
+  "blockTranslated": {
+    "message": "块已翻译，但 $COUNT$ 个文本片段在写回前已更改。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockTranslatedSuccess": {
+    "message": "块已翻译。再次按快捷键即可恢复。"
+  },
+  "originalRestored": {
+    "message": "已恢复高亮块的原文。"
+  },
+  "pageRestored": {
+    "message": "已恢复原始页面。"
+  },
+  "showingOriginal": {
+    "message": "正在显示原始页面文本。"
+  },
+  "showingTranslation": {
+    "message": "正在显示翻译页面文本。"
+  },
+  "detectedLanguages": {
+    "message": "检测到 $SOURCE$ → $TARGET$",
+    "placeholders": {
+      "source": {
+        "content": "$1"
+      },
+      "target": {
+        "content": "$2"
+      }
+    }
+  },
+  "moveToTranslate": {
+    "message": "将光标移到段落或标题上，然后再次尝试静默翻译。"
+  },
+  "translationInProgress": {
+    "message": "当前页面的静默翻译已在进行中。"
+  },
+  "blockTranslatedBilingual": {
+    "message": "块已在双语视图中翻译。再次按快捷键即可恢复。"
+  },
+  "pageTranslatedBilingual": {
+    "message": "页面已在双语视图中翻译，跨 $COUNT$ 个块。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "noVisibleBilingual": {
+    "message": "翻译已完成，但页面上没有添加可见的双语块。"
+  },
+  "translatingIndicator": {
+    "message": "翻译中..."
+  },
+  "unknownError": {
+    "message": "未知错误"
+  },
+  "contextMenuTranslateSelection": {
+    "message": "翻译选中内容"
+  },
+  "contextMenuTranslatePage": {
+    "message": "翻译整个页面"
+  },
+  "contextMenuSilentMode": {
+    "message": "静默翻译模式"
+  },
+  "contextMenuSilentParagraph": {
+    "message": "光标下的段落"
+  },
+  "contextMenuSilentFullPage": {
+    "message": "整页"
+  },
+  "contextMenuOpenSettings": {
+    "message": "打开翻译设置"
+  },
+  "apiKeyDefault": {
+    "message": "API 密钥"
+  },
+  "apiSecretDefault": {
+    "message": "API 密钥密文"
+  },
+  "regionDefault": {
+    "message": "区域"
+  },
+  "engineNotConfigured": {
+    "message": "$ENGINE$ 尚未配置。请在设置中添加 $FIELDS$，然后重试。",
+    "placeholders": {
+      "engine": {
+        "content": "$1"
+      },
+      "fields": {
+        "content": "$2"
+      }
+    }
+  }
+}

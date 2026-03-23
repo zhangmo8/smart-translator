@@ -15,6 +15,7 @@ export type EngineProvider =
 
 export type EngineCategory = 'standard' | 'ai';
 export type ThemeMode = 'light' | 'dark' | 'auto';
+export type UILanguage = 'auto' | 'en' | 'zh-CN';
 export type SilentMode = 'paragraph' | 'full-page';
 export type SilentDisplayMode = 'translate-only' | 'bilingual';
 export type CommandName = 'translate-selection' | 'silent-translate' | 'toggle-page-translate' | 'restore-original';
@@ -43,6 +44,7 @@ export interface TranslationSettings {
   targetLanguage: string;
   defaultEngine: EngineProvider;
   theme: ThemeMode;
+  uiLanguage: UILanguage;
   cacheEnabled: boolean;
   showSelectionIcon: boolean;
   silentMode: SilentMode;

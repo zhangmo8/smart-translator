@@ -23,6 +23,7 @@ import type {
   TranslateResponse,
 } from '../types';
 import { BATCH_SIZE, ENGINE_META, RATE_LIMIT_MS } from '../utils/constants';
+import { getUILanguage, setUILanguagePreference, t } from '../utils/i18n';
 
 const MENU_TRANSLATE_SELECTION = 'silence-translator:translate-selection';
 const MENU_TRANSLATE_PAGE = 'silence-translator:translate-page';
@@ -55,7 +56,10 @@ function joinLabels(labels: string[]): string {
     return labels[0] ?? '';
   }
 
-  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+  return new Intl.ListFormat(getUILanguage(), {
+    style: 'long',
+    type: 'conjunction',
+  }).format(labels);
 }
 
 function assertEngineConfigured(provider: EngineProvider, config: EngineConfig): void {
@@ -63,22 +67,22 @@ function assertEngineConfigured(provider: EngineProvider, config: EngineConfig):
   const missing: string[] = [];
 
   if (meta.requiresApiKey && !config.apiKey?.trim()) {
-    missing.push(meta.apiKeyLabel ?? 'API key');
+    missing.push(meta.apiKeyLabel ?? t('apiKeyDefault'));
   }
 
   if (meta.requiresApiSecret && !config.apiSecret?.trim()) {
-    missing.push(meta.apiSecretLabel ?? 'API secret');
+    missing.push(meta.apiSecretLabel ?? t('apiSecretDefault'));
   }
 
   if (meta.requiresRegion && !config.region?.trim()) {
-    missing.push(meta.regionLabel ?? 'Region');
+    missing.push(meta.regionLabel ?? t('regionDefault'));
   }
 
   if (!missing.length) {
     return;
   }
 
-  throw new Error(`${meta.label} is not configured yet. Add ${joinLabels(missing)} in Settings, then try again.`);
+  throw new Error(t('engineNotConfigured', [meta.label, joinLabels(missing)]));
 }
 
 async function withRateLimit<T>(provider: EngineProvider, task: () => Promise<T>): Promise<T> {
@@ -102,6 +106,7 @@ async function withRateLimit<T>(provider: EngineProvider, task: () => Promise<T>
 
 async function translateMany(payload: TranslateBatchPayload): Promise<TranslateBatchResponse> {
   const settings = await getSettings();
+  setUILanguagePreference(settings.uiLanguage);
   const provider = payload.engine ?? settings.defaultEngine;
   const config = settings.engines[provider];
   assertEngineConfigured(provider, config);
@@ -252,30 +257,31 @@ function createContextMenu(options: chrome.contextMenus.CreateProperties): Promi
 
 async function rebuildContextMenus(): Promise<void> {
   const settings = await getSettings();
+  setUILanguagePreference(settings.uiLanguage);
   await removeAllContextMenus();
 
   await createContextMenu({
     id: MENU_TRANSLATE_SELECTION,
-    title: 'Translate selection',
+    title: t('contextMenuTranslateSelection'),
     contexts: ['selection'],
   });
 
   await createContextMenu({
     id: MENU_TRANSLATE_PAGE,
-    title: 'Translate full page',
+    title: t('contextMenuTranslatePage'),
     contexts: ['page', 'selection'],
   });
 
   await createContextMenu({
     id: MENU_SILENT_PARENT,
-    title: 'Silent translate mode',
+    title: t('contextMenuSilentMode'),
     contexts: ['action', 'page', 'selection'],
   });
 
   await createContextMenu({
     id: MENU_SILENT_PARAGRAPH,
     parentId: MENU_SILENT_PARENT,
-    title: 'Paragraph under cursor',
+    title: t('contextMenuSilentParagraph'),
     type: 'radio',
     checked: settings.silentMode === 'paragraph',
     contexts: ['action', 'page', 'selection'],
@@ -284,7 +290,7 @@ async function rebuildContextMenus(): Promise<void> {
   await createContextMenu({
     id: MENU_SILENT_FULL_PAGE,
     parentId: MENU_SILENT_PARENT,
-    title: 'Full page',
+    title: t('contextMenuSilentFullPage'),
     type: 'radio',
     checked: settings.silentMode === 'full-page',
     contexts: ['action', 'page', 'selection'],
@@ -292,7 +298,7 @@ async function rebuildContextMenus(): Promise<void> {
 
   await createContextMenu({
     id: MENU_OPEN_OPTIONS,
-    title: 'Open silence-translator settings',
+    title: t('contextMenuOpenSettings'),
     contexts: ['action'],
   });
 }
@@ -367,11 +373,14 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
   void (async () => {
     switch (message.type) {
       case 'SETTINGS_GET': {
-        sendResponse(await getSettings());
+        const settings = await getSettings();
+        setUILanguagePreference(settings.uiLanguage);
+        sendResponse(settings);
         return;
       }
       case 'SETTINGS_UPDATE': {
         const updated = await updateSettings(message.payload);
+        setUILanguagePreference(updated.uiLanguage);
         sendResponse(updated);
         return;
       }

@@ -1,5 +1,6 @@
 import { BATCH_SIZE } from '../utils/constants';
 import type { TranslateBatchResponse, TranslationSettings } from '../types';
+import { t } from '../utils/i18n';
 
 interface NodeRecord {
   original: string;
@@ -55,19 +56,19 @@ export class PageTranslator {
 
     const nodes = this.collectTextNodes(document.body);
     if (!nodes.length) {
-      this.reportStatus(showBar, 'Nothing translatable found on this page.');
+      this.reportStatus(showBar, t('nothingTranslatablePage'));
       return false;
     }
 
     if (showBar) {
-      this.setStatus(`Scanning ${nodes.length} text fragments...`);
+      this.setStatus(t('scanningFragments', [nodes.length.toString()]));
     }
 
     let stats: TranslationApplyStats;
     try {
       stats = await this.translateNodes(nodes, (done, total) => {
         if (showBar) {
-          this.setStatus(`Translated ${done} / ${total} fragments`);
+          this.setStatus(t('translatedFragments', [done.toString(), total.toString()]));
         }
       });
     } catch (error: unknown) {
@@ -88,8 +89,8 @@ export class PageTranslator {
 
     if (showBar) {
       const partialStatus = stats.detachedCount
-        ? `Page translated with ${stats.appliedCount} updated fragments. ${stats.detachedCount} fragment${stats.detachedCount === 1 ? '' : 's'} changed before write-back.`
-        : 'Page translated. Toggle original anytime.';
+        ? t('pageTranslatedPartial', [stats.appliedCount.toString(), stats.detachedCount.toString(), stats.detachedCount === 1 ? '' : 's'])
+        : t('pageTranslatedComplete');
       this.setStatus(partialStatus, 'success');
     }
     return true;
@@ -102,7 +103,7 @@ export class PageTranslator {
 
     const nodes = this.collectTextNodes(element);
     if (!nodes.length) {
-      this.reportStatus(showBar, 'Nothing translatable found in the current block.');
+      this.reportStatus(showBar, t('nothingTranslatableBlock'));
       return false;
     }
 
@@ -121,8 +122,8 @@ export class PageTranslator {
       if (showBar) {
         this.ensureBar();
         const partialStatus = stats.detachedCount
-          ? `Block translated, but ${stats.detachedCount} text fragment${stats.detachedCount === 1 ? '' : 's'} changed before write-back.`
-          : 'Block translated. Press the shortcut again to restore it.';
+          ? t('blockTranslatedPartial', [stats.detachedCount.toString(), stats.detachedCount === 1 ? '' : 's'])
+          : t('blockTranslatedComplete');
         this.setStatus(partialStatus, 'success');
       }
       return true;
@@ -150,7 +151,7 @@ export class PageTranslator {
       this.removeBar();
     } else {
       this.updateBarButtons();
-      this.setStatus('Original text restored for the highlighted block.');
+      this.setStatus(t('originalBlockRestored'));
     }
   }
 
@@ -172,7 +173,7 @@ export class PageTranslator {
 
     this.ensureBar();
     this.updateBarButtons();
-    this.setStatus('Original page restored.');
+    this.setStatus(t('originalPageRestored'));
   }
 
   toggleOriginalVisibility(): void {
@@ -190,7 +191,7 @@ export class PageTranslator {
 
     this.showingOriginal = !this.showingOriginal;
     this.updateBarButtons();
-    this.setStatus(this.showingOriginal ? 'Showing original page text.' : 'Showing translated page text.');
+    this.setStatus(this.showingOriginal ? t('showingOriginal') : t('showingTranslated'));
   }
 
   highlightElement(element: HTMLElement): void {
@@ -259,9 +260,13 @@ export class PageTranslator {
 
       if (response.translations.length !== slice.length) {
         throw new Error(
-          `The ${settings.defaultEngine} engine returned ${response.translations.length} result${response.translations.length === 1 ? '' : 's'} for ${slice.length} text fragment${
+          t('engineReturnedMismatch', [
+            settings.defaultEngine,
+            response.translations.length.toString(),
+            response.translations.length === 1 ? '' : 's',
+            slice.length.toString(),
             slice.length === 1 ? '' : 's'
-          }. Nothing was written to the page.`,
+          ])
         );
       }
 
@@ -272,9 +277,12 @@ export class PageTranslator {
 
     if (translatedTexts.length !== nodes.length) {
       throw new Error(
-        `Received ${translatedTexts.length} translated fragment${translatedTexts.length === 1 ? '' : 's'} for ${nodes.length} DOM text node${
+        t('receivedMismatchNode', [
+          translatedTexts.length.toString(),
+          translatedTexts.length === 1 ? '' : 's',
+          nodes.length.toString(),
           nodes.length === 1 ? '' : 's'
-        }. The page was left unchanged.`,
+        ])
       );
     }
 
@@ -286,7 +294,7 @@ export class PageTranslator {
       const currentText = node.nodeValue ?? '';
       const translated = translatedTexts[index];
       if (typeof translated !== 'string') {
-        throw new Error(`Missing translated text for fragment ${index + 1}.`);
+        throw new Error(t('missingTranslatedFragment', [(index + 1).toString()]));
       }
 
       if (!node.isConnected) {
@@ -307,7 +315,7 @@ export class PageTranslator {
     });
 
     if (detectedSourceLanguage) {
-      this.setStatus(`Detected ${detectedSourceLanguage} → ${settings.targetLanguage}`);
+      this.setStatus(t('detectedLanguages', [detectedSourceLanguage, settings.targetLanguage]));
     }
 
     return {
@@ -385,15 +393,15 @@ export class PageTranslator {
         <div class="silence-translator-bar__brand">
           <span class="silence-translator-bar__dot"></span>
           <div>
-            <div class="silence-translator-bar__title">silence-translator</div>
-            <div class="silence-translator-bar__status">Ready to translate</div>
+            <div class="silence-translator-bar__title">${t('silenceTranslatorBar')}</div>
+            <div class="silence-translator-bar__status">${t('barReady')}</div>
           </div>
         </div>
         <div class="silence-translator-bar__actions">
-          <button class="silence-translator-button silence-translator-button--ghost" data-action="settings">Settings</button>
-          <button class="silence-translator-button silence-translator-button--ghost" data-action="toggle-original">Show original</button>
-          <button class="silence-translator-button silence-translator-button--ghost" data-action="restore">Restore</button>
-          <button class="silence-translator-button" data-action="close">Close</button>
+          <button class="silence-translator-button silence-translator-button--ghost" data-action="settings">${t('settings')}</button>
+          <button class="silence-translator-button silence-translator-button--ghost" data-action="toggle-original">${t('barShowOriginal')}</button>
+          <button class="silence-translator-button silence-translator-button--ghost" data-action="restore">${t('barRestore')}</button>
+          <button class="silence-translator-button" data-action="close">${t('close')}</button>
         </div>
       </div>
     `;
@@ -490,14 +498,14 @@ export class PageTranslator {
   private formatNoVisibleChangeMessage(scope: 'page' | 'block', stats: TranslationApplyStats): string {
     const subject = scope === 'page' ? 'page' : 'block';
     if (stats.detachedCount === stats.totalNodes && stats.totalNodes > 0) {
-      return `Translation finished, but the ${subject} updated before the result could be written to the DOM. Try again once it settles.`;
+      return t('updatedBeforeWriteback', [subject]);
     }
 
     if (stats.unchangedCount === stats.totalNodes && stats.totalNodes > 0) {
-      return `Translation finished, but the translated ${scope === 'page' ? 'page text' : 'block text'} matched the current DOM, so nothing changed visibly.`;
+      return t('translatedMatchedOriginal', [scope === 'page' ? 'page text' : 'block text']);
     }
 
-    return `Translation finished, but no visible DOM update was applied to this ${subject}.`;
+    return t('noVisibleUpdate', [subject]);
   }
 
   private formatError(error: unknown): string {
@@ -505,6 +513,6 @@ export class PageTranslator {
       return error.message;
     }
 
-    return 'Translation failed. Please try again.';
+    return t('translationFailedGeneric');
   }
 }

@@ -3,6 +3,7 @@ import { BATCH_SIZE } from '../utils/constants';
 import { PageTranslator } from './page-translate';
 
 import type { TranslateBatchResponse, TranslationSettings } from '../types';
+import { t } from '../utils/i18n';
 
 type SettingsGetter = () => Promise<TranslationSettings>;
 type BlockTranslationEntry = {
@@ -58,7 +59,7 @@ export class SilentTranslator {
     this.pruneParagraphState();
     const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
     if (!paragraph) {
-      this.pageTranslator.notifyTransient('Move your cursor over a paragraph or heading, then try silent translate again.');
+      this.pageTranslator.notifyTransient(t('moveCursorForSilent'));
       return;
     }
 
@@ -70,7 +71,7 @@ export class SilentTranslator {
     }
 
     if (this.isTranslating) {
-      this.pageTranslator.notifyTransient('A silent translation is already in progress for the current page.');
+      this.pageTranslator.notifyTransient(t('silentInProgress'));
       return;
     }
 
@@ -130,7 +131,7 @@ export class SilentTranslator {
     this.pruneParagraphState();
     const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
     if (!paragraph) {
-      this.pageTranslator.notifyTransient('Move your cursor over a paragraph or heading, then try silent translate again.');
+      this.pageTranslator.notifyTransient(t('moveCursorForSilent'));
       return;
     }
 
@@ -140,13 +141,13 @@ export class SilentTranslator {
     }
 
     if (this.isTranslating) {
-      this.pageTranslator.notifyTransient('A silent translation is already in progress for the current page.');
+      this.pageTranslator.notifyTransient(t('silentInProgress'));
       return;
     }
 
     const sourceText = this.getElementText(paragraph);
     if (!sourceText) {
-      this.pageTranslator.notifyTransient('Nothing translatable found in the current block.', 'error');
+      this.pageTranslator.notifyTransient(t('nothingTranslatableBlock'), 'error');
       return;
     }
 
@@ -155,13 +156,13 @@ export class SilentTranslator {
     try {
       const translatedText = await this.translateText(sourceText, settings);
       if (!translatedText || translatedText === sourceText) {
-        this.pageTranslator.notifyTransient('Translation finished, but the translated block matched the original text.', 'error');
+        this.pageTranslator.notifyTransient(t('translatedMatchedOriginalBlock'), 'error');
         return;
       }
 
       this.attachBilingualBlock(paragraph, translatedText, settings.targetLanguage);
       this.pageTranslator.highlightElement(paragraph);
-      this.pageTranslator.notifyTransient('Block translated in bilingual view. Press the shortcut again to restore it.', 'success');
+      this.pageTranslator.notifyTransient(t('bilingualBlockTranslated'), 'success');
     } catch (error: unknown) {
       this.pageTranslator.notifyTransient(this.formatError(error), 'error');
     } finally {
@@ -175,18 +176,18 @@ export class SilentTranslator {
 
     if (this.bilingualPageActive) {
       this.clearBilingualState();
-      this.pageTranslator.notifyTransient('Original page restored.', 'success');
+      this.pageTranslator.notifyTransient(t('bilingualPageRestored'), 'success');
       return;
     }
 
     if (this.isTranslating) {
-      this.pageTranslator.notifyTransient('A silent translation is already in progress for the current page.');
+      this.pageTranslator.notifyTransient(t('silentInProgress'));
       return;
     }
 
     const entries = this.collectPageTranslationEntries();
     if (!entries.length) {
-      this.pageTranslator.notifyTransient('Nothing translatable found on this page.', 'error');
+      this.pageTranslator.notifyTransient(t('nothingTranslatablePage'), 'error');
       return;
     }
 
@@ -215,11 +216,11 @@ export class SilentTranslator {
 
       this.bilingualPageActive = appliedCount > 0;
       if (!appliedCount) {
-        this.pageTranslator.notifyTransient('Translation finished, but no visible bilingual blocks were added to the page.', 'error');
+        this.pageTranslator.notifyTransient(t('noBilingualBlocks'), 'error');
         return;
       }
 
-      this.pageTranslator.notifyTransient(`Page translated in bilingual view across ${appliedCount} block${appliedCount === 1 ? '' : 's'}.`, 'success');
+      this.pageTranslator.notifyTransient(t('bilingualPageTranslated', [appliedCount.toString(), appliedCount === 1 ? '' : 's']), 'success');
     } catch (error: unknown) {
       this.pageTranslator.notifyTransient(this.formatError(error), 'error');
     } finally {
@@ -240,7 +241,7 @@ export class SilentTranslator {
       this.pageTranslator.highlightElement(paragraph);
     }
     if (notify) {
-      this.pageTranslator.notifyTransient('Original text restored for the highlighted block.', 'success');
+      this.pageTranslator.notifyTransient(t('bilingualBlockRestored'), 'success');
     }
   }
 
@@ -361,9 +362,13 @@ export class SilentTranslator {
 
       if (response.translations.length !== slice.length) {
         throw new Error(
-          `The ${settings.defaultEngine} engine returned ${response.translations.length} result${response.translations.length === 1 ? '' : 's'} for ${slice.length} text block${
+          t('engineReturnedMismatchBlock', [
+            settings.defaultEngine,
+            response.translations.length.toString(),
+            response.translations.length === 1 ? '' : 's',
+            slice.length.toString(),
             slice.length === 1 ? '' : 's'
-          }. Nothing was written to the page.`,
+          ])
         );
       }
 
@@ -378,7 +383,7 @@ export class SilentTranslator {
       return error.message;
     }
 
-    return 'Translation failed. Please try again.';
+    return t('translationFailedGeneric');
   }
 
   private showLoadingIndicator(paragraph: HTMLElement): void {
@@ -391,7 +396,7 @@ export class SilentTranslator {
     indicator.innerHTML = `
       <div class="silence-translator-inline-loading__shell">
         <span class="silence-translator-inline-loading__spinner" aria-hidden="true"></span>
-        <span class="silence-translator-inline-loading__label">Translating...</span>
+        <span class="silence-translator-inline-loading__label">${t('translatingInline')}</span>
       </div>
     `.trim();
 

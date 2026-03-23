@@ -53,6 +53,7 @@ export function createDefaultSettings(browserLanguage = getBrowserLanguage()): T
     targetLanguage: normalizeLanguageCode(browserLanguage),
     defaultEngine: 'microsoft',
     theme: 'auto',
+    uiLanguage: 'auto',
     cacheEnabled: true,
     showSelectionIcon: true,
     silentMode: 'paragraph',
