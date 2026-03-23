@@ -9,6 +9,7 @@ const CACHE_KEY = 'translationCache';
 export const DEFAULT_HOTKEYS: HotkeyConfig = {
   selection: 'Alt+T',
   silent: 'Alt+Q',
+  bilingual: 'Alt+B',
   page: 'Alt+W',
   restore: 'Alt+R',
 };
@@ -57,24 +58,31 @@ export function createDefaultSettings(browserLanguage = getBrowserLanguage()): T
     cacheEnabled: true,
     showSelectionIcon: true,
     silentMode: 'paragraph',
-    silentDisplayMode: 'translate-only',
     hotkeys: DEFAULT_HOTKEYS,
     engines: createDefaultEngineSettings(),
   };
 }
 
 export function mergeSettings(base: TranslationSettings, patch: Partial<TranslationSettings>): TranslationSettings {
+  const {
+    hotkeys,
+    engines,
+    // Ignore the legacy display mode once bilingual is a dedicated action.
+    silentDisplayMode: _legacySilentDisplayMode,
+    ...restPatch
+  } = patch as Partial<TranslationSettings> & { silentDisplayMode?: unknown };
+
   return {
     ...base,
-    ...patch,
+    ...restPatch,
     hotkeys: {
       ...base.hotkeys,
-      ...(patch.hotkeys ?? {}),
+      ...(hotkeys ?? {}),
     },
     engines: {
       ...base.engines,
       ...Object.fromEntries(
-        Object.entries(patch.engines ?? {}).map(([provider, value]) => [
+        Object.entries(engines ?? {}).map(([provider, value]) => [
           provider,
           {
             ...base.engines[provider as EngineProvider],

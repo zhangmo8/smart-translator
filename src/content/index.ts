@@ -6,7 +6,6 @@ import { SilentTranslator } from './silent-translate';
 import { HotkeyManager } from './hotkeys';
 
 import { getSettings } from '../store/settings';
-import { normalizeHotkey } from '../utils/hotkeys';
 import { setUILanguagePreference, t } from '../utils/i18n';
 import type { ContentMessage, TranslationSettings } from '../types';
 
@@ -28,22 +27,6 @@ async function initialize(): Promise<void> {
   const silentTranslator = new SilentTranslator(settingsGetter, pageTranslator);
   selectionTranslator.updateDisplaySettings(currentSettings.showSelectionIcon);
   const hotkeys = new HotkeyManager(currentSettings.hotkeys, {
-    canRestore: () => {
-      const hotkeysOverlap = normalizeHotkey(currentSettings.hotkeys.silent) === normalizeHotkey(currentSettings.hotkeys.restore);
-      if (!hotkeysOverlap) {
-        return false;
-      }
-
-      if (currentSettings.silentMode === 'paragraph') {
-        return silentTranslator.isHoveredParagraphTranslated();
-      }
-
-      if (currentSettings.silentDisplayMode === 'bilingual') {
-        return silentTranslator.hasBilingualPageTranslation();
-      }
-
-      return pageTranslator.isTranslated();
-    },
     selection: async () => {
       const handledInput = await selectionTranslator.translateFocusedInput();
       if (handledInput) {
@@ -53,7 +36,10 @@ async function initialize(): Promise<void> {
       await selectionTranslator.translateSelection();
     },
     silent: async () => {
-      await silentTranslator.trigger();
+      await silentTranslator.trigger('silent');
+    },
+    bilingual: async () => {
+      await silentTranslator.trigger('bilingual');
     },
     page: async () => {
       await pageTranslator.togglePageTranslation(true);
@@ -95,7 +81,11 @@ async function initialize(): Promise<void> {
           }
 
           if (message.payload.command === 'silent-translate') {
-            await silentTranslator.trigger();
+            await silentTranslator.trigger('silent');
+          }
+
+          if (message.payload.command === 'bilingual-translate') {
+            await silentTranslator.trigger('bilingual');
           }
 
           if (message.payload.command === 'toggle-page-translate') {

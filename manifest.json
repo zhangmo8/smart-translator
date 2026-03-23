@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "silence-translator",
-  "description": "A modern browser extension for instant translation across selections, pages, and inputs.",
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
   "version": "1.0.0",
   "default_locale": "en",
   "minimum_chrome_version": "114",
@@ -21,7 +21,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "silence-translator",
+    "default_title": "__MSG_extName__",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
@@ -45,28 +45,31 @@
         "default": "Alt+T",
         "mac": "Alt+T"
       },
-      "description": "Translate current selection or focused input"
+      "description": "__MSG_commandTranslateSelection__"
     },
     "silent-translate": {
       "suggested_key": {
         "default": "Alt+Q",
         "mac": "Alt+Q"
       },
-      "description": "Run silent translate (paragraph/full page)"
+      "description": "__MSG_commandSilentTranslate__"
+    },
+    "bilingual-translate": {
+      "suggested_key": {
+        "default": "Alt+B",
+        "mac": "Alt+B"
+      },
+      "description": "__MSG_commandBilingualTranslate__"
     },
     "toggle-page-translate": {
       "suggested_key": {
         "default": "Alt+W",
         "mac": "Alt+W"
       },
-      "description": "Translate or restore the full page"
+      "description": "__MSG_commandTogglePageTranslate__"
     },
     "restore-original": {
-      "suggested_key": {
-        "default": "Alt+R",
-        "mac": "Alt+R"
-      },
-      "description": "Restore the original page text"
+      "description": "__MSG_commandRestoreOriginal__"
     }
   },
   "content_scripts": [

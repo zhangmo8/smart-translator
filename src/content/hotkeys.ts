@@ -3,9 +3,9 @@ import { isHotkeyMatch } from '../utils/hotkeys';
 import type { HotkeyConfig } from '../types';
 
 interface HotkeyActions {
-  canRestore: () => boolean;
   selection: () => Promise<void>;
   silent: () => Promise<void>;
+  bilingual: () => Promise<void>;
   page: () => Promise<void>;
   restore: () => void;
 }
@@ -23,14 +23,9 @@ export class HotkeyManager {
   handleKeydown = (event: KeyboardEvent): void => {
     const matchesSelection = isHotkeyMatch(event, this.hotkeys.selection);
     const matchesSilent = isHotkeyMatch(event, this.hotkeys.silent);
+    const matchesBilingual = isHotkeyMatch(event, this.hotkeys.bilingual);
     const matchesPage = isHotkeyMatch(event, this.hotkeys.page);
     const matchesRestore = isHotkeyMatch(event, this.hotkeys.restore);
-
-    if (matchesSilent && matchesRestore && this.actions.canRestore()) {
-      event.preventDefault();
-      void this.actions.silent();
-      return;
-    }
 
     if (matchesSelection) {
       event.preventDefault();
@@ -41,6 +36,12 @@ export class HotkeyManager {
     if (matchesSilent) {
       event.preventDefault();
       void this.actions.silent();
+      return;
+    }
+
+    if (matchesBilingual) {
+      event.preventDefault();
+      void this.actions.bilingual();
       return;
     }
 

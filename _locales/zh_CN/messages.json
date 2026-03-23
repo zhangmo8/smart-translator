@@ -9,7 +9,10 @@
     "message": "翻译当前选中内容或聚焦的输入框"
   },
   "commandSilentTranslate": {
-    "message": "运行静默翻译（段落/整页）"
+    "message": "运行静默翻译（替换段落/整页）"
+  },
+  "commandBilingualTranslate": {
+    "message": "运行双语翻译（段落/整页）"
   },
   "commandTogglePageTranslate": {
     "message": "翻译或恢复整个页面"
@@ -144,7 +147,7 @@
     "message": "浅色"
   },
   "silentTranslation": {
-    "message": "静默翻译"
+    "message": "静默 / 双语范围"
   },
   "silentModeParagraph": {
     "message": "光标下的段落"
@@ -187,6 +190,9 @@
   },
   "hotkeySilent": {
     "message": "静默翻译"
+  },
+  "hotkeyBilingual": {
+    "message": "双语翻译"
   },
   "hotkeyPage": {
     "message": "整页切换"
@@ -465,10 +471,10 @@
     "message": "恢复"
   },
   "moveCursorForSilent": {
-    "message": "将光标移至段落或标题上，然后再次尝试静默翻译。"
+    "message": "将光标移至段落或标题上，然后重试。"
   },
   "silentInProgress": {
-    "message": "当前页面正在进行静默翻译。"
+    "message": "当前页面已有翻译任务正在进行。"
   },
   "bilingualBlockRestored": {
     "message": "已恢复高亮区块的原文。"
@@ -760,7 +766,7 @@
     "message": "翻译整个页面"
   },
   "contextMenuSilentMode": {
-    "message": "静默翻译模式"
+    "message": "静默 / 双语范围"
   },
   "contextMenuSilentParagraph": {
     "message": "光标下的段落"

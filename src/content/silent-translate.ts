@@ -6,6 +6,7 @@ import type { TranslateBatchResponse, TranslationSettings } from '../types';
 import { t } from '../utils/i18n';
 
 type SettingsGetter = () => Promise<TranslationSettings>;
+type SilentTranslateVariant = 'silent' | 'bilingual';
 type BlockTranslationEntry = {
   element: HTMLElement;
   text: string;
@@ -35,23 +36,38 @@ export class SilentTranslator {
     this.hoveredElement = element;
   }
 
-  async trigger(): Promise<void> {
+  async trigger(variant: SilentTranslateVariant = 'silent'): Promise<void> {
     const settings = await this.getSettings();
     if (settings.silentMode === 'full-page') {
-      if (settings.silentDisplayMode === 'bilingual') {
+      if (variant === 'bilingual') {
         await this.toggleBilingualPage(settings);
         return;
       }
 
-      await this.pageTranslator.togglePageTranslation(false);
+      await this.toggleSilentPage();
       return;
     }
 
-    if (settings.silentDisplayMode === 'bilingual') {
+    if (variant === 'bilingual') {
       await this.toggleBilingualParagraph(settings);
       return;
     }
 
+    await this.toggleSilentParagraph();
+  }
+
+  clearParagraphState(): void {
+    this.translatedParagraphs.clear();
+    this.clearBilingualState();
+    this.hideLoadingIndicator();
+  }
+
+  private async toggleSilentPage(): Promise<void> {
+    this.clearBilingualState();
+    await this.pageTranslator.togglePageTranslation(false);
+  }
+
+  private async toggleSilentParagraph(): Promise<void> {
     if (!this.pageTranslator.isTranslated() && this.translatedParagraphs.size) {
       this.translatedParagraphs.clear();
     }
@@ -68,6 +84,10 @@ export class SilentTranslator {
       this.pageTranslator.highlightElement(paragraph);
       this.translatedParagraphs.delete(paragraph);
       return;
+    }
+
+    if (this.bilingualBlocks.has(paragraph)) {
+      this.restoreBilingualBlock(paragraph, false, false);
     }
 
     if (this.isTranslating) {
@@ -89,23 +109,6 @@ export class SilentTranslator {
       this.hideLoadingIndicator();
       this.isTranslating = false;
     }
-  }
-
-  isHoveredParagraphTranslated(): boolean {
-    this.pruneParagraphState();
-    const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
-    return Boolean(paragraph && (this.translatedParagraphs.has(paragraph) || this.bilingualBlocks.has(paragraph)));
-  }
-
-  hasBilingualPageTranslation(): boolean {
-    this.pruneParagraphState();
-    return this.bilingualPageActive && this.bilingualBlocks.size > 0;
-  }
-
-  clearParagraphState(): void {
-    this.translatedParagraphs.clear();
-    this.clearBilingualState();
-    this.hideLoadingIndicator();
   }
 
   private pruneParagraphState(): void {
@@ -131,17 +134,20 @@ export class SilentTranslator {
     this.pruneParagraphState();
     const paragraph = this.pageTranslator.findParagraphCandidate(this.hoveredElement);
     if (!paragraph) {
-      this.pageTranslator.notifyTransient(t('moveCursorForSilent'));
       return;
     }
 
     if (this.bilingualBlocks.has(paragraph)) {
-      this.restoreBilingualBlock(paragraph, true);
+      this.restoreBilingualBlock(paragraph, true, false);
       return;
     }
 
+    if (this.translatedParagraphs.has(paragraph)) {
+      this.pageTranslator.restoreElement(paragraph);
+      this.translatedParagraphs.delete(paragraph);
+    }
+
     if (this.isTranslating) {
-      this.pageTranslator.notifyTransient(t('silentInProgress'));
       return;
     }
 
@@ -162,7 +168,6 @@ export class SilentTranslator {
 
       this.attachBilingualBlock(paragraph, translatedText, settings.targetLanguage);
       this.pageTranslator.highlightElement(paragraph);
-      this.pageTranslator.notifyTransient(t('bilingualBlockTranslated'), 'success');
     } catch (error: unknown) {
       this.pageTranslator.notifyTransient(this.formatError(error), 'error');
     } finally {
@@ -176,12 +181,19 @@ export class SilentTranslator {
 
     if (this.bilingualPageActive) {
       this.clearBilingualState();
-      this.pageTranslator.notifyTransient(t('bilingualPageRestored'), 'success');
       return;
     }
 
+    if (this.bilingualBlocks.size) {
+      this.clearBilingualState();
+    }
+
+    if (this.pageTranslator.isTranslated()) {
+      this.pageTranslator.restoreOriginalPage(true);
+      this.translatedParagraphs.clear();
+    }
+
     if (this.isTranslating) {
-      this.pageTranslator.notifyTransient(t('silentInProgress'));
       return;
     }
 
@@ -219,8 +231,6 @@ export class SilentTranslator {
         this.pageTranslator.notifyTransient(t('noBilingualBlocks'), 'error');
         return;
       }
-
-      this.pageTranslator.notifyTransient(t('bilingualPageTranslated', [appliedCount.toString(), appliedCount === 1 ? '' : 's']), 'success');
     } catch (error: unknown) {
       this.pageTranslator.notifyTransient(this.formatError(error), 'error');
     } finally {

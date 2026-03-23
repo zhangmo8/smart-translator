@@ -17,12 +17,12 @@ export type EngineCategory = 'standard' | 'ai';
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type UILanguage = 'auto' | 'en' | 'zh-CN';
 export type SilentMode = 'paragraph' | 'full-page';
-export type SilentDisplayMode = 'translate-only' | 'bilingual';
-export type CommandName = 'translate-selection' | 'silent-translate' | 'toggle-page-translate' | 'restore-original';
+export type CommandName = 'translate-selection' | 'silent-translate' | 'bilingual-translate' | 'toggle-page-translate' | 'restore-original';
 
 export interface HotkeyConfig {
   selection: string;
   silent: string;
+  bilingual: string;
   page: string;
   restore: string;
 }
@@ -48,7 +48,6 @@ export interface TranslationSettings {
   cacheEnabled: boolean;
   showSelectionIcon: boolean;
   silentMode: SilentMode;
-  silentDisplayMode: SilentDisplayMode;
   hotkeys: HotkeyConfig;
   engines: EngineSettings;
 }

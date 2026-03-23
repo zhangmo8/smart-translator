@@ -9,7 +9,10 @@
     "message": "Translate current selection or focused input"
   },
   "commandSilentTranslate": {
-    "message": "Run silent translate (paragraph/full page)"
+    "message": "Run silent translate (replace paragraph/full page)"
+  },
+  "commandBilingualTranslate": {
+    "message": "Run bilingual translate (paragraph/full page)"
   },
   "commandTogglePageTranslate": {
     "message": "Translate or restore the full page"
@@ -144,7 +147,7 @@
     "message": "Light"
   },
   "silentTranslation": {
-    "message": "Silent translation"
+    "message": "Silent / bilingual scope"
   },
   "silentModeParagraph": {
     "message": "Paragraph under cursor"
@@ -187,6 +190,9 @@
   },
   "hotkeySilent": {
     "message": "Silent translate"
+  },
+  "hotkeyBilingual": {
+    "message": "Bilingual translate"
   },
   "hotkeyPage": {
     "message": "Full page toggle"
@@ -465,10 +471,10 @@
     "message": "Restore"
   },
   "moveCursorForSilent": {
-    "message": "Move your cursor over a paragraph or heading, then try silent translate again."
+    "message": "Move your cursor over a paragraph or heading, then try again."
   },
   "silentInProgress": {
-    "message": "A silent translation is already in progress for the current page."
+    "message": "A translation is already in progress for the current page."
   },
   "bilingualBlockRestored": {
     "message": "Original text restored for the highlighted block."
@@ -559,7 +565,7 @@
     "message": "Translate full page"
   },
   "contextMenuSilentMode": {
-    "message": "Silent translate mode"
+    "message": "Silent / bilingual scope"
   },
   "contextMenuSilentParagraph": {
     "message": "Paragraph under cursor"

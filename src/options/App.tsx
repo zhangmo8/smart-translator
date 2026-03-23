@@ -406,18 +406,6 @@ export default function App() {
                     <option value="full-page">{t('silentModeFullPage')}</option>
                   </select>
                 </div>
-
-                <div className="settings-field-stack">
-                  <label className="soft-label">{t('silentOutput')}</label>
-                  <select
-                    className="field"
-                    value={draft.silentDisplayMode}
-                    onChange={(event) => updateTopLevelField('silentDisplayMode', event.target.value as TranslationSettings['silentDisplayMode'])}
-                  >
-                    <option value="translate-only">{t('silentOutputReplace')}</option>
-                    <option value="bilingual">{t('silentOutputBilingual')}</option>
-                  </select>
-                </div>
               </div>
 
               <div className="settings-toggle-grid mt-6 grid gap-4 sm:grid-cols-2">
@@ -471,6 +459,7 @@ export default function App() {
             <div className="settings-hotkey-grid mt-6">
               <HotkeyInput field="selection" label={t('hotkeySelection')} onChange={updateHotkey} value={draft.hotkeys.selection} />
               <HotkeyInput field="silent" label={t('hotkeySilent')} onChange={updateHotkey} value={draft.hotkeys.silent} />
+              <HotkeyInput field="bilingual" label={t('hotkeyBilingual')} onChange={updateHotkey} value={draft.hotkeys.bilingual} />
               <HotkeyInput field="page" label={t('hotkeyPage')} onChange={updateHotkey} value={draft.hotkeys.page} />
               <HotkeyInput field="restore" label={t('hotkeyRestore')} onChange={updateHotkey} value={draft.hotkeys.restore} />
             </div>
