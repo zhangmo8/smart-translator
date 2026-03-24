@@ -279,6 +279,114 @@ html[data-theme='light'] .smart-ui--options .glass-card {
   min-width: 0;
 }
 
+.settings-hotkey-control {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-hotkey-input {
+  flex: 1 1 auto;
+}
+
+.settings-hotkey-control[data-state='recording'] .settings-hotkey-input,
+.settings-hotkey-control[data-state='pending'] .settings-hotkey-input {
+  border-color: rgba(94, 234, 212, 0.5);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.12);
+}
+
+.settings-hotkey-action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.7);
+  color: rgb(226 232 240);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.settings-hotkey-action:hover {
+  border-color: rgba(94, 234, 212, 0.35);
+  background: rgba(15, 23, 42, 0.92);
+  color: white;
+}
+
+.settings-hotkey-action:focus-visible {
+  outline: 2px solid rgba(94, 234, 212, 0.45);
+  outline-offset: 2px;
+}
+
+.settings-hotkey-control[data-state='recording'] .settings-hotkey-action,
+.settings-hotkey-control[data-state='pending'] .settings-hotkey-action {
+  border-color: rgba(94, 234, 212, 0.45);
+  background: rgba(13, 148, 136, 0.18);
+  color: rgb(153 246 228);
+}
+
+.settings-hotkey-action__icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.settings-hotkey-hint {
+  margin-top: 0.55rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgb(148 163 184);
+}
+
+.settings-hotkey-hint[data-state='recording'] {
+  color: rgb(125 211 252);
+}
+
+.settings-hotkey-hint[data-state='pending'] {
+  color: rgb(153 246 228);
+}
+
+html[data-theme='light'] .settings-hotkey-action {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgb(15 23 42);
+}
+
+html[data-theme='light'] .settings-hotkey-action:hover {
+  border-color: rgba(13, 148, 136, 0.35);
+  background: white;
+}
+
+html[data-theme='light'] .settings-hotkey-control[data-state='recording'] .settings-hotkey-input,
+html[data-theme='light'] .settings-hotkey-control[data-state='pending'] .settings-hotkey-input {
+  border-color: rgba(13, 148, 136, 0.4);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.12);
+}
+
+html[data-theme='light'] .settings-hotkey-control[data-state='recording'] .settings-hotkey-action,
+html[data-theme='light'] .settings-hotkey-control[data-state='pending'] .settings-hotkey-action {
+  border-color: rgba(13, 148, 136, 0.35);
+  background: rgba(204, 251, 241, 0.9);
+  color: rgb(15 118 110);
+}
+
+html[data-theme='light'] .settings-hotkey-hint {
+  color: rgb(100 116 139);
+}
+
+html[data-theme='light'] .settings-hotkey-hint[data-state='recording'] {
+  color: rgb(3 105 161);
+}
+
+html[data-theme='light'] .settings-hotkey-hint[data-state='pending'] {
+  color: rgb(15 118 110);
+}
+
 .settings-toggle-card,
 .settings-storage-card,
 .settings-note {

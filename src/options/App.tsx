@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_HOTKEYS, createDefaultSettings } from '../store/settings';
 import { ENGINE_META, PROVIDER_ORDER } from '../utils/constants';
@@ -24,31 +24,160 @@ const HotkeyInput = memo(function HotkeyInput({
   value: string;
   onChange: (field: keyof HotkeyConfig, value: string) => void;
 }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [pendingValue, setPendingValue] = useState(value);
+  const [hasPendingChange, setHasPendingChange] = useState(false);
+
+  useEffect(() => {
+    if (!recording) {
+      setPendingValue(value);
+      setHasPendingChange(false);
+    }
+  }, [recording, value]);
+
+  useEffect(() => {
+    if (recording) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [recording]);
+
+  const recorderState = recording ? (hasPendingChange ? 'pending' : 'recording') : 'saved';
+  const displayValue = recording ? pendingValue : value;
+  const helperText =
+    recorderState === 'recording'
+      ? t('hotkeyRecorderRecording')
+      : recorderState === 'pending'
+        ? t('hotkeyRecorderPending')
+        : t('hotkeyRecorderSaved');
+
+  const startRecording = useCallback(() => {
+    setPendingValue(value);
+    setHasPendingChange(false);
+    setRecording(true);
+  }, [value]);
+
+  const cancelRecording = useCallback(() => {
+    setPendingValue(value);
+    setHasPendingChange(false);
+    setRecording(false);
+  }, [value]);
+
+  const commitRecording = useCallback(() => {
+    onChange(field, normalizeHotkey(pendingValue));
+    setRecording(false);
+    setHasPendingChange(false);
+  }, [field, onChange, pendingValue]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (!recording) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          startRecording();
+        }
+
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitRecording();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cancelRecording();
+        return;
+      }
+
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        setPendingValue('');
+        setHasPendingChange(true);
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        cancelRecording();
+        return;
+      }
+
+      event.preventDefault();
+      const hotkey = eventToHotkey(event.nativeEvent);
+      if (!hotkey) {
+        return;
+      }
+
+      setPendingValue(hotkey);
+      setHasPendingChange(true);
+    },
+    [cancelRecording, commitRecording, recording, startRecording],
+  );
+
   return (
     <div className="settings-field-stack">
       <label className="soft-label">{label}</label>
-      <input
-        className="field"
-        value={value}
-        onChange={(event) => onChange(field, normalizeHotkey(event.target.value))}
-        onKeyDown={(event) => {
-          if (event.key === 'Tab') {
-            return;
-          }
+      <div className="settings-hotkey-control" data-state={recorderState}>
+        <input
+          className="field settings-hotkey-input"
+          placeholder={t('hotkeyEmpty')}
+          readOnly
+          ref={inputRef}
+          value={displayValue}
+          onBlur={() => {
+            if (recording) {
+              cancelRecording();
+            }
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          aria-label={recording ? t('hotkeyCancelRecording') : t('hotkeyStartRecording')}
+          className="settings-hotkey-action"
+          onClick={() => {
+            if (recording) {
+              cancelRecording();
+              return;
+            }
 
-          if (event.key === 'Backspace' || event.key === 'Delete') {
-            event.preventDefault();
-            onChange(field, '');
-            return;
-          }
-
-          event.preventDefault();
-          const hotkey = eventToHotkey(event.nativeEvent);
-          if (hotkey) {
-            onChange(field, hotkey);
-          }
-        }}
-      />
+            startRecording();
+          }}
+          onMouseDown={(event) => event.preventDefault()}
+          title={recording ? t('hotkeyCancelRecording') : t('hotkeyStartRecording')}
+          type="button"
+        >
+          {recording ? (
+            <svg aria-hidden="true" className="settings-hotkey-action__icon" viewBox="0 0 20 20">
+              <path d="M6 6L14 14M14 6L6 14" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+            </svg>
+          ) : (
+            <svg aria-hidden="true" className="settings-hotkey-action__icon" viewBox="0 0 20 20">
+              <path
+                d="M11.95 5.15a1.5 1.5 0 0 1 2.12 0l.78.78a1.5 1.5 0 0 1 0 2.12l-5.9 5.9-3.02.62.62-3.02 5.4-5.4Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.55"
+              />
+              <path
+                d="M11.1 6l2.9 2.9"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.55"
+              />
+            </svg>
+          )}
+        </button>
+      </div>
+      <p className="settings-hotkey-hint" data-state={recorderState}>
+        {helperText}
+      </p>
     </div>
   );
 });

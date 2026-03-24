@@ -200,6 +200,24 @@
   "hotkeyRestore": {
     "message": "恢复原文"
   },
+  "hotkeyEmpty": {
+    "message": "未设置"
+  },
+  "hotkeyStartRecording": {
+    "message": "开始录制快捷键"
+  },
+  "hotkeyCancelRecording": {
+    "message": "取消录制快捷键"
+  },
+  "hotkeyRecorderSaved": {
+    "message": "点击右侧图标开始录制，按 Enter 应用到当前设置草稿。"
+  },
+  "hotkeyRecorderRecording": {
+    "message": "录制中，按下快捷键后按 Enter 保存，或点击图标取消。"
+  },
+  "hotkeyRecorderPending": {
+    "message": "已记录快捷键，按 Enter 保存，或点击图标取消。"
+  },
   "standardEngines": {
     "message": "标准翻译引擎"
   },

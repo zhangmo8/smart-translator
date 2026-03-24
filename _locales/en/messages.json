@@ -200,6 +200,24 @@
   "hotkeyRestore": {
     "message": "Restore original"
   },
+  "hotkeyEmpty": {
+    "message": "Not set"
+  },
+  "hotkeyStartRecording": {
+    "message": "Start recording shortcut"
+  },
+  "hotkeyCancelRecording": {
+    "message": "Cancel shortcut recording"
+  },
+  "hotkeyRecorderSaved": {
+    "message": "Use the icon to start recording, then press Enter to apply it to the current draft."
+  },
+  "hotkeyRecorderRecording": {
+    "message": "Recording. Press your shortcut, then Enter to save it, or click the icon to cancel."
+  },
+  "hotkeyRecorderPending": {
+    "message": "Shortcut captured. Press Enter to save it, or click the icon to cancel."
+  },
   "standardEngines": {
     "message": "Standard Translation Engines"
   },
