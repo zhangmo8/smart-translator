@@ -15,6 +15,16 @@ interface TencentTextTranslateResponse {
   };
 }
 
+interface TencentLanguageDetectResponse {
+  Response: {
+    Lang?: string;
+    Error?: {
+      Code: string;
+      Message: string;
+    };
+  };
+}
+
 function toTencentLanguage(code: string): string {
   const normalized = normalizeLanguageCode(code);
   if (normalized === 'auto') {
@@ -35,15 +45,25 @@ function fromTencentLanguage(code?: string): string | undefined {
     return undefined;
   }
 
-  if (code === 'zh') {
+  const normalized = code.replace('_', '-');
+
+  if (normalized === 'zh') {
     return 'zh';
   }
 
-  if (code === 'zh-TW') {
+  if (normalized === 'zh-TW') {
     return 'zh-TW';
   }
 
-  return normalizeLanguageCode(code);
+  if (normalized === 'jp') {
+    return 'ja';
+  }
+
+  if (normalized === 'kr') {
+    return 'ko';
+  }
+
+  return normalizeLanguageCode(normalized);
 }
 
 export class TencentEngine extends BaseTranslationEngine {
@@ -60,12 +80,29 @@ export class TencentEngine extends BaseTranslationEngine {
 
     const translations: string[] = [];
     let detectedSourceLanguage = '';
+    const requestedSourceLanguage = toTencentLanguage(request.sourceLanguage);
+    const targetLanguage = toTencentLanguage(request.targetLanguage);
 
     for (const text of request.texts) {
+      let sourceLanguage = requestedSourceLanguage;
+
+      if (request.sourceLanguage === 'auto') {
+        const detectedLanguage = await this.detectLanguage({ text, secretId, secretKey, region });
+        if (detectedLanguage) {
+          detectedSourceLanguage ||= detectedLanguage;
+          sourceLanguage = toTencentLanguage(detectedLanguage);
+        }
+      }
+
+      if (sourceLanguage !== 'auto' && sourceLanguage === targetLanguage) {
+        translations.push(text);
+        continue;
+      }
+
       const response = await this.requestSignedTranslation({
         text,
-        sourceLanguage: toTencentLanguage(request.sourceLanguage),
-        targetLanguage: toTencentLanguage(request.targetLanguage),
+        sourceLanguage,
+        targetLanguage,
         secretId,
         secretKey,
         region,
@@ -92,6 +129,39 @@ export class TencentEngine extends BaseTranslationEngine {
     };
   }
 
+  private async detectLanguage({
+    text,
+    secretId,
+    secretKey,
+    region,
+  }: {
+    text: string;
+    secretId: string;
+    secretKey: string;
+    region: string;
+  }): Promise<string | undefined> {
+    try {
+      const response = await this.requestSignedJson<TencentLanguageDetectResponse>({
+        action: 'LanguageDetect',
+        payload: {
+          Text: text.slice(0, 1999),
+          ProjectId: 0,
+        },
+        secretId,
+        secretKey,
+        region,
+      });
+
+      if (response.Response.Error) {
+        return undefined;
+      }
+
+      return fromTencentLanguage(response.Response.Lang);
+    } catch {
+      return undefined;
+    }
+  }
+
   private async requestSignedTranslation({
     text,
     sourceLanguage,
@@ -107,22 +177,43 @@ export class TencentEngine extends BaseTranslationEngine {
     secretKey: string;
     region: string;
   }): Promise<TencentTextTranslateResponse> {
+    return this.requestSignedJson<TencentTextTranslateResponse>({
+      action: 'TextTranslate',
+      payload: {
+        SourceText: text,
+        Source: sourceLanguage,
+        Target: targetLanguage,
+        ProjectId: 0,
+      },
+      secretId,
+      secretKey,
+      region,
+    });
+  }
+
+  private async requestSignedJson<T>({
+    action,
+    payload,
+    secretId,
+    secretKey,
+    region,
+  }: {
+    action: string;
+    payload: Record<string, unknown>;
+    secretId: string;
+    secretKey: string;
+    region: string;
+  }): Promise<T> {
     const service = 'tmt';
     const host = 'tmt.tencentcloudapi.com';
-    const action = 'TextTranslate';
     const version = '2018-03-21';
     const timestamp = Math.floor(Date.now() / 1000);
     const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
-    const payload = JSON.stringify({
-      SourceText: text,
-      Source: sourceLanguage,
-      Target: targetLanguage,
-      ProjectId: 0,
-    });
+    const body = JSON.stringify(payload);
     const contentType = 'application/json; charset=utf-8';
     const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-tc-action:${action.toLowerCase()}\n`;
     const signedHeaders = 'content-type;host;x-tc-action';
-    const canonicalRequest = `POST\n/\n\n${canonicalHeaders}\n${signedHeaders}\n${await sha256Hex(payload)}`;
+    const canonicalRequest = `POST\n/\n\n${canonicalHeaders}\n${signedHeaders}\n${await sha256Hex(body)}`;
     const credentialScope = `${date}/${service}/tc3_request`;
     const stringToSign = `TC3-HMAC-SHA256\n${timestamp}\n${credentialScope}\n${await sha256Hex(canonicalRequest)}`;
     const secretDate = await hmacSha256Bytes(`TC3${secretKey}`, date);
@@ -131,7 +222,7 @@ export class TencentEngine extends BaseTranslationEngine {
     const signature = await hmacSha256Hex(secretSigning, stringToSign);
     const authorization = `TC3-HMAC-SHA256 Credential=${secretId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-    return this.requestJson<TencentTextTranslateResponse>(`https://${host}/`, {
+    return this.requestJson<T>(`https://${host}/`, {
       method: 'POST',
       headers: {
         Authorization: authorization,
@@ -141,7 +232,7 @@ export class TencentEngine extends BaseTranslationEngine {
         'X-TC-Timestamp': `${timestamp}`,
         'X-TC-Version': version,
       },
-      body: payload,
+      body,
     });
   }
 }
