@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { clearHistoryInRuntime, getHistoryFromRuntime, getSettingsFromRuntime, openOptionsInRuntime, translateTextInRuntime, updateSettingsInRuntime } from '../utils/runtime';
 import { applyTheme } from '../utils/theme';
-import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS, humanizeLanguage } from '../utils/languages';
+import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS, getLanguageOptionLabel } from '../utils/languages';
 import { ENGINE_META, PROVIDER_ORDER } from '../utils/constants';
-import { setUILanguagePreference, t } from '../utils/i18n';
+import { setUILanguagePreference, t, getUILanguage } from '../utils/i18n';
 import type { EngineCategory, EngineProvider, TranslationHistoryEntry, TranslationSettings } from '../types';
 
 export default function App() {
@@ -41,6 +41,8 @@ export default function App() {
       setError(runtimeError instanceof Error ? runtimeError.message : t('loadingError'));
     });
   }, []);
+
+  const getLanguageLabel = (code: string): string => getLanguageOptionLabel(code, getUILanguage());
 
   const engines = useMemo(
     () => PROVIDER_ORDER.filter((provider) => ENGINE_META[provider].category === engineCategory),
@@ -83,28 +85,70 @@ export default function App() {
       return;
     }
 
-    setSourceLanguage(targetLanguage);
-    setTargetLanguage(sourceLanguage);
+    const nextSourceLanguage = targetLanguage;
+    const nextTargetLanguage = sourceLanguage;
+    setSourceLanguage(nextSourceLanguage);
+    setTargetLanguage(nextTargetLanguage);
+    setSettings((current) =>
+      current
+        ? {
+            ...current,
+            sourceLanguage: nextSourceLanguage,
+            targetLanguage: nextTargetLanguage,
+          }
+        : current,
+    );
+    void updateSettingsInRuntime({ sourceLanguage: nextSourceLanguage, targetLanguage: nextTargetLanguage }).catch((runtimeError: unknown) => {
+      setError(runtimeError instanceof Error ? runtimeError.message : t('loadingError'));
+    });
+  };
+
+  const handleLanguageChange = (field: 'sourceLanguage' | 'targetLanguage', value: string): void => {
+    if (field === 'sourceLanguage') {
+      setSourceLanguage(value);
+    } else {
+      setTargetLanguage(value);
+    }
+
+    setSettings((current) => (current ? { ...current, [field]: value } : current));
+    void updateSettingsInRuntime({ [field]: value }).catch((runtimeError: unknown) => {
+      setError(runtimeError instanceof Error ? runtimeError.message : t('loadingError'));
+    });
   };
 
   const handleCopy = async (): Promise<void> => {
-    await navigator.clipboard.writeText(result);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    if (!result) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch (runtimeError: unknown) {
+      setError(runtimeError instanceof Error ? runtimeError.message : t('copyFailedGeneric'));
+    }
   };
 
   const handleClearHistory = async (): Promise<void> => {
-    await clearHistoryInRuntime();
-    setHistory([]);
+    try {
+      await clearHistoryInRuntime();
+      setHistory([]);
+    } catch (runtimeError: unknown) {
+      setError(runtimeError instanceof Error ? runtimeError.message : t('loadingError'));
+    }
   };
 
   const handleEngineChange = async (nextEngine: EngineProvider): Promise<void> => {
+    const previousEngine = engine;
     setEngine(nextEngine);
     setSettings((current) => (current ? { ...current, defaultEngine: nextEngine } : current));
 
     try {
       await updateSettingsInRuntime({ defaultEngine: nextEngine });
     } catch (runtimeError) {
+      setEngine(previousEngine);
+      setSettings((current) => (current ? { ...current, defaultEngine: previousEngine } : current));
       setError(runtimeError instanceof Error ? runtimeError.message : t('engineUpdateFailed'));
     }
   };
@@ -143,10 +187,10 @@ export default function App() {
           <section className="grid grid-cols-[1fr_auto_1fr] gap-3">
             <div>
               <label className="soft-label">{t('sourceLanguage')}</label>
-              <select className="field" value={sourceLanguage} onChange={(event) => setSourceLanguage(event.target.value)}>
+              <select className="field" value={sourceLanguage} onChange={(event) => handleLanguageChange('sourceLanguage', event.target.value)}>
                 {[AUTO_LANGUAGE_OPTION, ...LANGUAGE_OPTIONS].map((language) => (
                   <option key={language.value} value={language.value}>
-                    {language.label}
+                    {language.value === 'auto' ? t('languageAutoDetect') : getLanguageLabel(language.value)}
                   </option>
                 ))}
               </select>
@@ -158,10 +202,10 @@ export default function App() {
             </div>
             <div>
               <label className="soft-label">{t('targetLanguage')}</label>
-              <select className="field" value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)}>
+              <select className="field" value={targetLanguage} onChange={(event) => handleLanguageChange('targetLanguage', event.target.value)}>
                 {LANGUAGE_OPTIONS.map((language) => (
                   <option key={language.value} value={language.value}>
-                    {language.label}
+                    {getLanguageLabel(language.value)}
                   </option>
                 ))}
               </select>
@@ -205,14 +249,14 @@ export default function App() {
               <div>
                 <div className="soft-label">{t('output')}</div>
                 <div className="text-xs text-slate-400">
-                  {humanizeLanguage(sourceLanguage)} → {humanizeLanguage(targetLanguage)}
+                  {getLanguageLabel(sourceLanguage)} → {getLanguageLabel(targetLanguage)}
                 </div>
               </div>
-              <button className="ghost-button px-3 py-1.5 text-xs" disabled={result === emptyResult} onClick={() => void handleCopy()}>
+              <button className="ghost-button px-3 py-1.5 text-xs" disabled={!result} onClick={() => void handleCopy()}>
                 {copied ? t('copied') : t('copy')}
               </button>
             </div>
-            <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">{result}</div>
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">{result || emptyResult}</div>
             {error ? <div className="mt-3 text-sm text-rose-300">{error}</div> : null}
           </section>
 
@@ -236,8 +280,8 @@ export default function App() {
                     onClick={() => {
                       setInput(entry.text);
                       setResult(entry.translatedText);
-                      setSourceLanguage(entry.sourceLanguage);
-                      setTargetLanguage(entry.targetLanguage);
+                      handleLanguageChange('sourceLanguage', entry.sourceLanguage);
+                      handleLanguageChange('targetLanguage', entry.targetLanguage);
                       setEngine(entry.engine);
                       setEngineCategory(ENGINE_META[entry.engine].category);
                     }}

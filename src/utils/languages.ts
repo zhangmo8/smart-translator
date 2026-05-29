@@ -49,6 +49,7 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
 ];
 
 const labelMap = new Map(LANGUAGE_OPTIONS.map((entry) => [entry.value.toLowerCase(), entry.label]));
+const supportedLanguageValues = new Set(LANGUAGE_OPTIONS.map((entry) => entry.value));
 
 export function normalizeLanguageCode(code: string): string {
   if (!code) {
@@ -83,6 +84,35 @@ export function humanizeLanguage(code: string): string {
 
   const normalized = normalizeLanguageCode(code).toLowerCase();
   return labelMap.get(normalized) ?? code;
+}
+
+export function getLanguageOptionLabel(code: string, locale = navigator.language || 'en'): string {
+  const normalized = normalizeLanguageCode(code);
+  if (normalized === 'auto') {
+    return AUTO_LANGUAGE_OPTION.label;
+  }
+
+  const fallback = labelMap.get(normalized.toLowerCase()) ?? code;
+
+  try {
+    return new Intl.DisplayNames([locale], { type: 'language' }).of(normalized) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function normalizeSupportedLanguageOption(code: string, fallback = 'en'): string {
+  const normalized = normalizeLanguageCode(code);
+  if (normalized === 'auto' || supportedLanguageValues.has(normalized)) {
+    return normalized;
+  }
+
+  const baseLanguage = toBaseLanguage(normalized);
+  if (supportedLanguageValues.has(baseLanguage)) {
+    return baseLanguage;
+  }
+
+  return supportedLanguageValues.has(fallback) ? fallback : 'en';
 }
 
 export function getBrowserLanguage(): string {

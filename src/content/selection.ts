@@ -136,21 +136,8 @@ export class SelectionTranslator {
       return true;
     }
 
-    const sourceText = activeElement.innerText.trim();
-    if (!sourceText) {
-      return false;
-    }
-
     this.captureElementAnchor(activeElement);
-    this.activeSelectionText = sourceText;
-    const translated = await this.requestTranslation(sourceText, false);
-    if (!translated) {
-      return false;
-    }
-
-    activeElement.innerText = translated;
-    this.hideTooltip();
-    this.flash(activeElement);
+    this.showResult(t('richEditorTranslationUnsupported'), true);
     return true;
   }
 

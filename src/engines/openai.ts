@@ -1,4 +1,5 @@
 import { BaseTranslationEngine } from './base';
+import { ENGINE_META } from '../utils/constants';
 
 import type { EngineRequest, EngineResponse } from '../types';
 
@@ -17,7 +18,7 @@ export class OpenAIEngine extends BaseTranslationEngine {
     const apiKey = this.requireApiKey(request.config.apiKey);
     const model = request.modelOverride || request.config.model || 'gpt-4o-mini';
     const { systemPrompt, userPrompt } = this.createBatchPrompt(request);
-    const response = await this.requestJson<OpenAIResponse>('https://api.openai.com/v1/chat/completions', {
+    const response = await this.requestJson<OpenAIResponse>(request.config.apiUrl || ENGINE_META.openai.defaultApiUrl || 'https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

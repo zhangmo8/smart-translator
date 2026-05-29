@@ -68,6 +68,9 @@
   "outputPlaceholder": {
     "message": "翻译结果将显示在这里。使用当前默认引擎或切换标签页在标准 API 和 AI 提供商之间切换。"
   },
+  "languageAutoDetect": {
+    "message": "自动检测"
+  },
   "recentHistory": {
     "message": "最近历史"
   },
@@ -492,7 +495,13 @@
     "message": "将光标移至段落或标题上，然后重试。"
   },
   "silentInProgress": {
-    "message": "当前页面已有翻译任务正在进行。"
+    "message": "整页翻译任务已在进行中。"
+  },
+  "silentBlockInProgress": {
+    "message": "当前区块正在翻译中。你可以移到其他段落并并行翻译。"
+  },
+  "silentParagraphsInProgress": {
+    "message": "仍有段落翻译在进行中。请等待完成后再启动整页翻译。"
   },
   "bilingualBlockRestored": {
     "message": "已恢复高亮区块的原文。"
@@ -814,5 +823,11 @@
         "content": "$2"
       }
     }
+  },
+  "barShowTranslation": {
+    "message": "显示译文"
+  },
+  "richEditorTranslationUnsupported": {
+    "message": "为避免破坏格式，暂不自动替换富文本编辑器内容。请翻译页面选中文本，或使用普通输入框/文本框。"
   }
 }

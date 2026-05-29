@@ -45,8 +45,11 @@ export class DeepLEngine extends BaseTranslationEngine {
       body: body.toString(),
     });
 
+    const translations = response.translations.map((item) => item.text);
+    this.assertTranslationCount(translations, request.texts.length);
+
     return {
-      translations: response.translations.map((item) => item.text),
+      translations,
       detectedSourceLanguage: response.translations[0]?.detected_source_language,
     };
   }

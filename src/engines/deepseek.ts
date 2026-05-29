@@ -1,4 +1,5 @@
 import { BaseTranslationEngine } from './base';
+import { ENGINE_META } from '../utils/constants';
 
 import type { EngineRequest, EngineResponse } from '../types';
 
@@ -17,7 +18,7 @@ export class DeepSeekEngine extends BaseTranslationEngine {
     const apiKey = this.requireApiKey(request.config.apiKey);
     const model = request.modelOverride || request.config.model || 'deepseek-chat';
     const { systemPrompt, userPrompt } = this.createBatchPrompt(request);
-    const response = await this.requestJson<DeepSeekResponse>('https://api.deepseek.com/chat/completions', {
+    const response = await this.requestJson<DeepSeekResponse>(request.config.apiUrl || ENGINE_META.deepseek.defaultApiUrl || 'https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

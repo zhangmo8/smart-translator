@@ -68,6 +68,9 @@
   "outputPlaceholder": {
     "message": "Translation output appears here. Use your current default engine or switch tabs to jump between standard APIs and AI providers."
   },
+  "languageAutoDetect": {
+    "message": "Auto-detect"
+  },
   "recentHistory": {
     "message": "Recent history"
   },
@@ -492,7 +495,13 @@
     "message": "Move your cursor over a paragraph or heading, then try again."
   },
   "silentInProgress": {
-    "message": "A translation is already in progress for the current page."
+    "message": "A full-page translation is already in progress."
+  },
+  "silentBlockInProgress": {
+    "message": "This block is already being translated. Move to another paragraph to translate it in parallel."
+  },
+  "silentParagraphsInProgress": {
+    "message": "Paragraph translations are still running. Wait for them to finish before starting a full-page translation."
   },
   "bilingualBlockRestored": {
     "message": "Original text restored for the highlighted block."
@@ -613,5 +622,11 @@
         "content": "$2"
       }
     }
+  },
+  "barShowTranslation": {
+    "message": "Show translation"
+  },
+  "richEditorTranslationUnsupported": {
+    "message": "Rich-text editors are not replaced automatically to avoid breaking formatting. Select text on the page or use a plain input/textarea."
   }
 }

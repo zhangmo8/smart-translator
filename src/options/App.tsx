@@ -3,8 +3,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_HOTKEYS, createDefaultSettings } from '../store/settings';
 import { ENGINE_META, PROVIDER_ORDER } from '../utils/constants';
 import { eventToHotkey, normalizeHotkey } from '../utils/hotkeys';
-import { UI_LANGUAGE_OPTIONS, setUILanguagePreference, t } from '../utils/i18n';
-import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS } from '../utils/languages';
+import { UI_LANGUAGE_OPTIONS, getUILanguage, setUILanguagePreference, t } from '../utils/i18n';
+import { AUTO_LANGUAGE_OPTION, LANGUAGE_OPTIONS, getLanguageOptionLabel } from '../utils/languages';
 import { getSettingsFromRuntime, updateSettingsInRuntime } from '../utils/runtime';
 import { applyTheme } from '../utils/theme';
 import type { EngineCategory, EngineProvider, EngineSettings, HotkeyConfig, TranslationSettings } from '../types';
@@ -240,7 +240,7 @@ const ProviderCard = memo(function ProviderCard({
           </div>
         ) : null}
 
-        {provider === 'deepl' || provider === 'libretranslate' ? (
+        {provider === 'deepl' || provider === 'libretranslate' || provider === 'openai' || provider === 'deepseek' ? (
           <div className={fieldClassName(true)}>
             <label className="soft-label">{t('apiUrl')}</label>
             <input
@@ -318,6 +318,8 @@ export default function App() {
       setStatusTone('error');
     });
   }, []);
+
+  const getLanguageLabel = (code: string): string => getLanguageOptionLabel(code, getUILanguage());
 
   const groupedProviders = useMemo(
     () => ({
@@ -478,7 +480,7 @@ export default function App() {
                   <select className="field" value={draft.sourceLanguage} onChange={(event) => updateTopLevelField('sourceLanguage', event.target.value)}>
                     {[AUTO_LANGUAGE_OPTION, ...LANGUAGE_OPTIONS].map((language) => (
                       <option key={language.value} value={language.value}>
-                        {language.label}
+                        {language.value === 'auto' ? t('languageAutoDetect') : getLanguageLabel(language.value)}
                       </option>
                     ))}
                   </select>
@@ -489,7 +491,7 @@ export default function App() {
                   <select className="field" value={draft.targetLanguage} onChange={(event) => updateTopLevelField('targetLanguage', event.target.value)}>
                     {LANGUAGE_OPTIONS.map((language) => (
                       <option key={language.value} value={language.value}>
-                        {language.label}
+                        {getLanguageLabel(language.value)}
                       </option>
                     ))}
                   </select>

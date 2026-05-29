@@ -52,8 +52,11 @@ export class MicrosoftEngine extends BaseTranslationEngine {
       body: JSON.stringify(request.texts.map((text) => ({ Text: text }))),
     });
 
+    const translations = response.map((item) => item.translations[0]?.text ?? '');
+    this.assertTranslationCount(translations, request.texts.length);
+
     return {
-      translations: response.map((item) => item.translations[0]?.text ?? ''),
+      translations,
       detectedSourceLanguage: response[0]?.detectedLanguage?.language,
     };
   }

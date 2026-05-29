@@ -175,7 +175,8 @@ function formatCodeKey(rawCode: string): string {
 }
 
 export function isHotkeyMatch(event: KeyboardEvent, hotkey: string): boolean {
-  return eventToHotkey(event) === normalizeHotkey(hotkey);
+  const normalizedHotkey = normalizeHotkey(hotkey);
+  return Boolean(normalizedHotkey) && eventToHotkey(event) === normalizedHotkey;
 }
 
 export function isEditableElement(element: Element | null): element is HTMLElement {

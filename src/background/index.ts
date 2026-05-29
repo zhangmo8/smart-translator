@@ -1,4 +1,6 @@
+import { md5Hex } from '../utils/crypto';
 import { getEngine } from '../engines';
+import { normalizeSupportedLanguageOption } from '../utils/languages';
 import {
   addHistoryEntry,
   buildCacheKey,
@@ -31,6 +33,7 @@ const MENU_SILENT_PARENT = 'silence-translator:silent-parent';
 const MENU_SILENT_PARAGRAPH = 'silence-translator:silent-paragraph';
 const MENU_SILENT_FULL_PAGE = 'silence-translator:silent-full-page';
 const MENU_OPEN_OPTIONS = 'silence-translator:open-options';
+const COMMANDS = new Set<CommandName>(['translate-selection', 'silent-translate', 'bilingual-translate', 'toggle-page-translate', 'restore-original']);
 
 const engineQueues = new Map<EngineProvider, Promise<unknown>>();
 const lastExecution = new Map<EngineProvider, number>();
@@ -104,28 +107,54 @@ async function withRateLimit<T>(provider: EngineProvider, task: () => Promise<T>
   return run;
 }
 
+function getPromptSignature(config: EngineConfig, promptOverride?: string): string {
+  const prompt = [config.systemPrompt, promptOverride].filter(Boolean).join('\n\n');
+  return prompt ? md5Hex(prompt) : '';
+}
+
+function isEngineProvider(value: unknown): value is EngineProvider {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ENGINE_META, value);
+}
+
+function normalizeRequestLanguage(value: string, fallback: string, allowAuto: boolean): string {
+  if (value === 'auto') {
+    return allowAuto ? 'auto' : normalizeSupportedLanguageOption(fallback || 'en');
+  }
+
+  return normalizeSupportedLanguageOption(value || fallback || 'en', fallback === 'auto' ? 'en' : fallback || 'en');
+}
+
 async function translateMany(payload: TranslateBatchPayload): Promise<TranslateBatchResponse> {
   const settings = await getSettings();
   setUILanguagePreference(settings.uiLanguage);
-  const provider = payload.engine ?? settings.defaultEngine;
+  const requestedProvider = payload.engine ?? settings.defaultEngine;
+  const provider = isEngineProvider(requestedProvider) ? requestedProvider : settings.defaultEngine;
+  const sourceLanguage = normalizeRequestLanguage(payload.sourceLanguage, settings.sourceLanguage, true);
+  const targetLanguage = normalizeRequestLanguage(payload.targetLanguage, settings.targetLanguage, false);
   const config = settings.engines[provider];
   assertEngineConfigured(provider, config);
   const engine = getEngine(provider);
-  const texts = payload.texts.filter((text) => text.trim().length > 0);
+  const hasText = payload.texts.some((text) => text.trim().length > 0);
 
-  if (!texts.length) {
-    return { translations: [], engine: provider, cachedCount: 0 };
+  if (!hasText) {
+    return { translations: payload.texts.map(() => ''), engine: provider, cachedCount: 0 };
   }
 
   const model = payload.modelOverride || config.model;
+  const promptSignature = getPromptSignature(config, payload.promptOverride);
   const cache = settings.cacheEnabled ? await getCache() : {};
-  const results = new Array<string>(texts.length);
+  const results = new Array<string>(payload.texts.length);
   let detectedSourceLanguage = '';
   let cachedCount = 0;
 
   const uncached = new Map<string, { key: string; text: string; indexes: number[] }>();
-  texts.forEach((text, index) => {
-    const key = buildCacheKey(provider, payload.sourceLanguage, payload.targetLanguage, text, model);
+  payload.texts.forEach((text, index) => {
+    if (!text.trim()) {
+      results[index] = '';
+      return;
+    }
+
+    const key = buildCacheKey(provider, sourceLanguage, targetLanguage, text, model, promptSignature);
     const cached = cache[key];
     if (cached) {
       results[index] = cached.translatedText;
@@ -149,8 +178,8 @@ async function translateMany(payload: TranslateBatchPayload): Promise<TranslateB
     const response = await withRateLimit(provider, () =>
       engine.translate({
         texts: workChunk.map((item) => item.text),
-        sourceLanguage: payload.sourceLanguage,
-        targetLanguage: payload.targetLanguage,
+        sourceLanguage,
+        targetLanguage,
         config,
         modelOverride: payload.modelOverride,
         promptOverride: payload.promptOverride,
@@ -209,10 +238,14 @@ async function translateMany(payload: TranslateBatchPayload): Promise<TranslateB
 }
 
 async function translateSingle(payload: TranslatePayload): Promise<TranslateResponse> {
+  const settings = await getSettings();
+  setUILanguagePreference(settings.uiLanguage);
+  const sourceLanguage = normalizeRequestLanguage(payload.sourceLanguage, settings.sourceLanguage, true);
+  const targetLanguage = normalizeRequestLanguage(payload.targetLanguage, settings.targetLanguage, false);
   const response = await translateMany({
     texts: [payload.text],
-    sourceLanguage: payload.sourceLanguage,
-    targetLanguage: payload.targetLanguage,
+    sourceLanguage,
+    targetLanguage,
     engine: payload.engine,
     modelOverride: payload.modelOverride,
     promptOverride: payload.promptOverride,
@@ -223,8 +256,8 @@ async function translateSingle(payload: TranslatePayload): Promise<TranslateResp
     id: uniqueId(),
     text: payload.text,
     translatedText,
-    sourceLanguage: payload.sourceLanguage,
-    targetLanguage: payload.targetLanguage,
+    sourceLanguage,
+    targetLanguage,
     engine: response.engine,
     timestamp: Date.now(),
   });
@@ -321,17 +354,32 @@ async function sendToActiveTab(message: ContentMessage): Promise<void> {
   }
 }
 
+function isCommandName(value: unknown): value is CommandName {
+  return typeof value === 'string' && COMMANDS.has(value as CommandName);
+}
+
 async function routeCommand(command: CommandName): Promise<void> {
   await sendToActiveTab({ type: 'RUN_COMMAND', payload: { command } });
 }
 
+let contextMenuRebuildQueue: Promise<void> = Promise.resolve();
+
+function queueContextMenuRebuild(): void {
+  contextMenuRebuildQueue = contextMenuRebuildQueue
+    .catch(() => undefined)
+    .then(rebuildContextMenus)
+    .catch((error: unknown) => {
+      console.warn('Failed to rebuild silence-translator context menus:', error);
+    });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-  void initializeSettings().then(rebuildContextMenus);
+  void initializeSettings().then(() => queueContextMenuRebuild());
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'sync' && changes.settings) {
-    void rebuildContextMenus();
+    queueContextMenuRebuild();
   }
 });
 
@@ -365,8 +413,11 @@ chrome.contextMenus.onClicked.addListener((info) => {
 });
 
 chrome.commands.onCommand.addListener((command) => {
-  const safeCommand = command as CommandName;
-  void routeCommand(safeCommand);
+  if (!isCommandName(command)) {
+    return;
+  }
+
+  void routeCommand(command);
 });
 
 chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
@@ -402,6 +453,11 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
         return;
       }
       case 'COMMAND_TRIGGER': {
+        if (!isCommandName(message.payload.command)) {
+          sendResponse({ error: 'Unknown command.' });
+          return;
+        }
+
         await routeCommand(message.payload.command);
         sendResponse({ ok: true });
         return;

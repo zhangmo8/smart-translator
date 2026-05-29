@@ -36,8 +36,11 @@ export class GoogleEngine extends BaseTranslationEngine {
       body: JSON.stringify(body),
     });
 
+    const translations = response.data.translations.map((item) => this.decodeHtmlEntities(item.translatedText));
+    this.assertTranslationCount(translations, request.texts.length);
+
     return {
-      translations: response.data.translations.map((item) => this.decodeHtmlEntities(item.translatedText)),
+      translations,
       detectedSourceLanguage: response.data.translations[0]?.detectedSourceLanguage,
     };
   }

@@ -7,29 +7,39 @@ export abstract class BaseTranslationEngine {
   abstract translate(request: EngineRequest): Promise<EngineResponse>;
 
   protected requireApiKey(apiKey: string | undefined, label = 'API key'): string {
-    if (!apiKey) {
+    const value = apiKey?.trim();
+    if (!value) {
       throw new Error(`${label} is required for ${this.provider}.`);
     }
 
-    return apiKey;
+    return value;
   }
 
   protected requireApiSecret(apiSecret: string | undefined, label = 'API secret'): string {
-    if (!apiSecret) {
+    const value = apiSecret?.trim();
+    if (!value) {
       throw new Error(`${label} is required for ${this.provider}.`);
     }
 
-    return apiSecret;
+    return value;
   }
 
   protected async requestJson<T>(url: string, init: RequestInit): Promise<T> {
     const response = await fetch(url, init);
+    const responseText = await response.text();
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`${this.provider} request failed (${response.status}): ${errorText.slice(0, 240)}`);
+      throw new Error(`${this.provider} request failed (${response.status}): ${responseText.slice(0, 240)}`);
     }
 
-    return (await response.json()) as T;
+    if (!responseText.trim()) {
+      throw new Error(`${this.provider} request failed: empty JSON response (${response.status}).`);
+    }
+
+    try {
+      return JSON.parse(responseText) as T;
+    } catch {
+      throw new Error(`${this.provider} request failed: invalid JSON response (${response.status}): ${responseText.slice(0, 240)}`);
+    }
   }
 
   protected async requestText(url: string, init: RequestInit): Promise<string> {
@@ -81,5 +91,11 @@ export abstract class BaseTranslationEngine {
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>');
+  }
+
+  protected assertTranslationCount(translations: string[], expected: number): void {
+    if (translations.length !== expected) {
+      throw new Error(`${this.provider} request failed: expected ${expected} translation${expected === 1 ? '' : 's'} but received ${translations.length}.`);
+    }
   }
 }

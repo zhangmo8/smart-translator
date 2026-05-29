@@ -12,6 +12,12 @@ type BlockTranslationEntry = {
   text: string;
 };
 
+type LoadingState = {
+  indicator: HTMLDivElement;
+  paragraph: HTMLElement;
+  anchor: Text | HTMLElement;
+};
+
 const SKIPPED_TAGS = new Set(['script', 'style', 'noscript', 'textarea', 'input', 'select', 'option', 'code', 'pre', 'kbd', 'samp']);
 
 export class SilentTranslator {
@@ -19,9 +25,10 @@ export class SilentTranslator {
   private translatedParagraphs = new Set<HTMLElement>();
   private bilingualBlocks = new Map<HTMLElement, HTMLElement>();
   private bilingualPageActive = false;
-  private loadingIndicator: HTMLDivElement | null = null;
-  private loadingParagraph: HTMLElement | null = null;
-  private isTranslating = false;
+  private loadingStates = new Map<HTMLElement, LoadingState>();
+  private activeParagraphTranslations = new Set<HTMLElement>();
+  private paragraphStateVersion = 0;
+  private isPageTranslating = false;
 
   constructor(
     private readonly getSettings: SettingsGetter,
@@ -59,10 +66,17 @@ export class SilentTranslator {
   clearParagraphState(): void {
     this.translatedParagraphs.clear();
     this.clearBilingualState();
-    this.hideLoadingIndicator();
+    this.activeParagraphTranslations.clear();
+    this.paragraphStateVersion += 1;
+    this.hideAllLoadingIndicators();
   }
 
   private async toggleSilentPage(): Promise<void> {
+    if (this.activeParagraphTranslations.size) {
+      this.pageTranslator.notifyTransient(t('silentParagraphsInProgress'));
+      return;
+    }
+
     this.clearBilingualState();
     await this.pageTranslator.togglePageTranslation(false);
   }
@@ -90,24 +104,34 @@ export class SilentTranslator {
       this.restoreBilingualBlock(paragraph, false, false);
     }
 
-    if (this.isTranslating) {
-      this.pageTranslator.notifyTransient(t('silentInProgress'));
+    if (this.activeParagraphTranslations.has(paragraph)) {
+      this.pageTranslator.notifyTransient(t('silentBlockInProgress'));
       return;
     }
 
-    this.isTranslating = true;
+    this.activeParagraphTranslations.add(paragraph);
+    const stateVersion = this.paragraphStateVersion;
     this.showLoadingIndicator(paragraph);
     try {
-      const translated = await this.pageTranslator.translateElement(paragraph, false);
-      if (!translated) {
+      if (!paragraph.isConnected) {
+        return;
+      }
+
+      const originalSnapshot = await this.pageTranslator.translateElement(paragraph, false);
+      if (!originalSnapshot) {
+        return;
+      }
+
+      if (stateVersion !== this.paragraphStateVersion || !paragraph.isConnected) {
+        this.pageTranslator.restoreElementSnapshot(originalSnapshot);
         return;
       }
 
       this.pageTranslator.highlightElement(paragraph);
       this.translatedParagraphs.add(paragraph);
     } finally {
-      this.hideLoadingIndicator();
-      this.isTranslating = false;
+      this.hideLoadingIndicator(paragraph);
+      this.activeParagraphTranslations.delete(paragraph);
     }
   }
 
@@ -147,7 +171,8 @@ export class SilentTranslator {
       this.translatedParagraphs.delete(paragraph);
     }
 
-    if (this.isTranslating) {
+    if (this.activeParagraphTranslations.has(paragraph)) {
+      this.pageTranslator.notifyTransient(t('silentBlockInProgress'));
       return;
     }
 
@@ -157,12 +182,21 @@ export class SilentTranslator {
       return;
     }
 
-    this.isTranslating = true;
+    this.activeParagraphTranslations.add(paragraph);
+    const stateVersion = this.paragraphStateVersion;
     this.showLoadingIndicator(paragraph);
     try {
+      if (!paragraph.isConnected) {
+        return;
+      }
+
       const translatedText = await this.translateText(sourceText, settings);
       if (!translatedText || translatedText === sourceText) {
         this.pageTranslator.notifyTransient(t('translatedMatchedOriginalBlock'), 'error');
+        return;
+      }
+
+      if (stateVersion !== this.paragraphStateVersion || !paragraph.isConnected) {
         return;
       }
 
@@ -171,13 +205,23 @@ export class SilentTranslator {
     } catch (error: unknown) {
       this.pageTranslator.notifyTransient(this.formatError(error), 'error');
     } finally {
-      this.hideLoadingIndicator();
-      this.isTranslating = false;
+      this.hideLoadingIndicator(paragraph);
+      this.activeParagraphTranslations.delete(paragraph);
     }
   }
 
   private async toggleBilingualPage(settings: TranslationSettings): Promise<void> {
     this.pruneParagraphState();
+
+    if (this.isPageTranslating) {
+      this.pageTranslator.notifyTransient(t('silentInProgress'));
+      return;
+    }
+
+    if (this.activeParagraphTranslations.size) {
+      this.pageTranslator.notifyTransient(t('silentParagraphsInProgress'));
+      return;
+    }
 
     if (this.bilingualPageActive) {
       this.clearBilingualState();
@@ -193,17 +237,13 @@ export class SilentTranslator {
       this.translatedParagraphs.clear();
     }
 
-    if (this.isTranslating) {
-      return;
-    }
-
     const entries = this.collectPageTranslationEntries();
     if (!entries.length) {
       this.pageTranslator.notifyTransient(t('nothingTranslatablePage'), 'error');
       return;
     }
 
-    this.isTranslating = true;
+    this.isPageTranslating = true;
     try {
       const translatedTexts = await this.translateTexts(
         entries.map((entry) => entry.text),
@@ -234,7 +274,7 @@ export class SilentTranslator {
     } catch (error: unknown) {
       this.pageTranslator.notifyTransient(this.formatError(error), 'error');
     } finally {
-      this.isTranslating = false;
+      this.isPageTranslating = false;
     }
   }
 
@@ -319,8 +359,7 @@ export class SilentTranslator {
           return NodeFilter.FILTER_REJECT;
         }
 
-        const style = window.getComputedStyle(parent);
-        if (style.display === 'none' || style.visibility === 'hidden') {
+        if (this.isHiddenByAncestor(parent)) {
           return NodeFilter.FILTER_REJECT;
         }
 
@@ -339,6 +378,24 @@ export class SilentTranslator {
     }
 
     return nodes;
+  }
+
+  private isHiddenByAncestor(element: HTMLElement): boolean {
+    let current: HTMLElement | null = element;
+    while (current && current !== document.body) {
+      if (current.hidden || current.getAttribute('aria-hidden') === 'true') {
+        return true;
+      }
+
+      const style = window.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return true;
+      }
+
+      current = current.parentElement;
+    }
+
+    return false;
   }
 
   private getElementText(element: HTMLElement): string {
@@ -397,12 +454,13 @@ export class SilentTranslator {
   }
 
   private showLoadingIndicator(paragraph: HTMLElement): void {
-    this.hideLoadingIndicator();
+    this.hideLoadingIndicator(paragraph);
 
     const indicator = document.createElement('div');
     indicator.className = 'silence-translator-inline-loading';
     indicator.dataset.smartTranslatorUi = 'true';
     indicator.setAttribute('data-silence-translator-ui', 'true');
+    indicator.setAttribute('aria-label', t('translatingInline'));
     indicator.innerHTML = `
       <div class="silence-translator-inline-loading__shell">
         <span class="silence-translator-inline-loading__spinner" aria-hidden="true"></span>
@@ -411,43 +469,112 @@ export class SilentTranslator {
     `.trim();
 
     document.documentElement.appendChild(indicator);
-    this.loadingIndicator = indicator;
-    this.loadingParagraph = paragraph;
-    document.addEventListener('scroll', this.repositionLoadingIndicator, true);
-    window.addEventListener('resize', this.repositionLoadingIndicator);
-    this.repositionLoadingIndicator();
+    this.loadingStates.set(paragraph, {
+      indicator,
+      paragraph,
+      anchor: this.findLoadingAnchor(paragraph),
+    });
+    this.ensureLoadingListeners();
+    this.repositionLoadingIndicator(paragraph);
   }
 
-  private hideLoadingIndicator(): void {
-    document.removeEventListener('scroll', this.repositionLoadingIndicator, true);
-    window.removeEventListener('resize', this.repositionLoadingIndicator);
-    this.loadingIndicator?.remove();
-    this.loadingIndicator = null;
-    this.loadingParagraph = null;
+  private findLoadingAnchor(paragraph: HTMLElement): Text | HTMLElement {
+    const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const text = node.nodeValue?.trim();
+        if (!text || text.length < 2) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        const parent = node.parentElement;
+        if (!parent || parent.closest('[data-silence-translator-ui="true"]') || this.isHiddenByAncestor(parent)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    return (walker.nextNode() as Text | null) ?? paragraph;
   }
 
-  private repositionLoadingIndicator = (): void => {
-    if (!this.loadingIndicator || !this.loadingParagraph) {
+  private getAnchorRect(anchor: Text | HTMLElement): DOMRect | null {
+    if (anchor instanceof Text) {
+      const range = document.createRange();
+      range.selectNodeContents(anchor);
+      const rect = Array.from(range.getClientRects()).find((item) => item.width > 0 && item.height > 0) ?? null;
+      range.detach();
+      return rect;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 ? rect : null;
+  }
+
+  private hideLoadingIndicator(paragraph: HTMLElement): void {
+    const state = this.loadingStates.get(paragraph);
+    if (!state) {
       return;
     }
 
-    if (!this.loadingParagraph.isConnected) {
-      this.hideLoadingIndicator();
+    state.indicator.remove();
+    this.loadingStates.delete(paragraph);
+    this.removeLoadingListenersIfIdle();
+  }
+
+  private hideAllLoadingIndicators(): void {
+    this.loadingStates.forEach((state) => state.indicator.remove());
+    this.loadingStates.clear();
+    this.removeLoadingListenersIfIdle();
+  }
+
+  private ensureLoadingListeners(): void {
+    if (this.loadingStates.size !== 1) {
       return;
     }
 
-    const rect = this.loadingParagraph.getBoundingClientRect();
-    const loadingRect = this.loadingIndicator.getBoundingClientRect();
-    const width = loadingRect.width || 132;
-    const height = loadingRect.height || 36;
-    const viewportPadding = 12;
-    const prefersBelow = rect.bottom + height + 10 <= window.innerHeight - viewportPadding;
-    const rawTop = prefersBelow ? rect.bottom + 8 : rect.top - height - 8;
-    const rawLeft = rect.right - width;
+    document.addEventListener('scroll', this.repositionLoadingIndicators, true);
+    window.addEventListener('resize', this.repositionLoadingIndicators);
+  }
+
+  private removeLoadingListenersIfIdle(): void {
+    if (this.loadingStates.size) {
+      return;
+    }
+
+    document.removeEventListener('scroll', this.repositionLoadingIndicators, true);
+    window.removeEventListener('resize', this.repositionLoadingIndicators);
+  }
+
+  private repositionLoadingIndicators = (): void => {
+    Array.from(this.loadingStates.keys()).forEach((paragraph) => this.repositionLoadingIndicator(paragraph));
+  };
+
+  private repositionLoadingIndicator(paragraph: HTMLElement): void {
+    const state = this.loadingStates.get(paragraph);
+    if (!state) {
+      return;
+    }
+
+    if (!state.paragraph.isConnected) {
+      this.hideLoadingIndicator(paragraph);
+      this.activeParagraphTranslations.delete(paragraph);
+      return;
+    }
+
+    const anchorRect = this.getAnchorRect(state.anchor) ?? state.paragraph.getBoundingClientRect();
+    const loadingRect = state.indicator.getBoundingClientRect();
+    const width = loadingRect.width || 26;
+    const height = loadingRect.height || 26;
+    const viewportPadding = 8;
+    const gap = 6;
+    const canPlaceLeft = anchorRect.left - width - gap >= viewportPadding;
+    const rawLeft = canPlaceLeft ? anchorRect.left - width - gap : anchorRect.left;
+    const rawTop = anchorRect.top + Math.max(0, (Math.min(anchorRect.height, height) - height) / 2);
     const left = Math.min(Math.max(rawLeft, viewportPadding), Math.max(viewportPadding, window.innerWidth - width - viewportPadding));
     const top = Math.min(Math.max(rawTop, viewportPadding), Math.max(viewportPadding, window.innerHeight - height - viewportPadding));
 
-    this.loadingIndicator.style.left = `${left}px`;
-    this.loadingIndicator.style.top = `${top}px`;
-  };
+    state.indicator.style.left = `${left}px`;
+    state.indicator.style.top = `${top}px`;
+  }
 }

@@ -7,6 +7,11 @@ interface NodeRecord {
   translated: string;
 }
 
+interface NodeTranslationEntry {
+  node: Text;
+  text: string;
+}
+
 interface TranslationApplyStats {
   totalNodes: number;
   appliedCount: number;
@@ -18,6 +23,7 @@ interface TranslationApplyStats {
 type SettingsGetter = () => Promise<TranslationSettings>;
 
 const BLOCK_TAGS = new Set(['ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DD', 'DIV', 'DT', 'FIGCAPTION', 'FOOTER', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEADER', 'LI', 'MAIN', 'NAV', 'P', 'SECTION', 'TD', 'TH']);
+const SKIPPED_TAGS = new Set(['script', 'style', 'noscript', 'textarea', 'input', 'select', 'option', 'code', 'pre', 'kbd', 'samp']);
 
 export class PageTranslator {
   private records = new Map<Text, NodeRecord>();
@@ -96,15 +102,22 @@ export class PageTranslator {
     return true;
   }
 
-  async translateElement(element: HTMLElement, showBar = true): Promise<boolean> {
+  async translateElement(element: HTMLElement, showBar = true): Promise<Map<Text, NodeRecord> | null> {
     if (!showBar) {
       this.removeBar();
     }
 
+    const existingRecords = new Map<Text, NodeRecord>();
+    this.records.forEach((record, node) => {
+      if (element.contains(node)) {
+        existingRecords.set(node, { ...record });
+      }
+    });
+
     const nodes = this.collectTextNodes(element);
     if (!nodes.length) {
       this.reportStatus(showBar, t('nothingTranslatableBlock'));
-      return false;
+      return null;
     }
 
     let stats: TranslationApplyStats;
@@ -116,7 +129,7 @@ export class PageTranslator {
 
       if (!stats.appliedCount) {
         this.reportStatus(showBar, this.formatNoVisibleChangeMessage('block', stats), 'error');
-        return false;
+        return null;
       }
 
       if (showBar) {
@@ -126,11 +139,24 @@ export class PageTranslator {
           : t('blockTranslatedComplete');
         this.setStatus(partialStatus, 'success');
       }
-      return true;
+      return existingRecords;
     } catch (error: unknown) {
       this.reportStatus(showBar, this.formatError(error), 'error');
-      return false;
+      return null;
     }
+  }
+
+  restoreElementSnapshot(snapshot: Map<Text, NodeRecord>): void {
+    snapshot.forEach((record, node) => {
+      if (node.isConnected) {
+        node.nodeValue = record.original;
+        this.records.set(node, record);
+      }
+    });
+
+    this.translated = this.records.size > 0;
+    this.showingOriginal = false;
+    this.updateBarButtons();
   }
 
   restoreElement(element: HTMLElement): void {
@@ -228,8 +254,14 @@ export class PageTranslator {
 
   private async translateNodes(nodes: Text[], onProgress?: (done: number, total: number) => void): Promise<TranslationApplyStats> {
     const settings = await this.getSettings();
-    const texts = nodes.map((node) => node.nodeValue ?? '').filter((text) => text.trim().length > 0);
-    if (!texts.length) {
+    const entries: NodeTranslationEntry[] = nodes
+      .map((node) => ({
+        node,
+        text: node.nodeValue ?? '',
+      }))
+      .filter((entry) => entry.text.trim().length > 0);
+
+    if (!entries.length) {
       return {
         totalNodes: 0,
         appliedCount: 0,
@@ -242,12 +274,12 @@ export class PageTranslator {
     const translatedTexts: string[] = [];
     let detectedSourceLanguage = '';
 
-    for (let index = 0; index < texts.length; index += chunkSize) {
-      const slice = texts.slice(index, index + chunkSize);
+    for (let index = 0; index < entries.length; index += chunkSize) {
+      const slice = entries.slice(index, index + chunkSize);
       const response = (await chrome.runtime.sendMessage({
         type: 'TRANSLATE_BATCH',
         payload: {
-          texts: slice,
+          texts: slice.map((entry) => entry.text),
           sourceLanguage: settings.sourceLanguage,
           targetLanguage: settings.targetLanguage,
           engine: settings.defaultEngine,
@@ -272,16 +304,16 @@ export class PageTranslator {
 
       translatedTexts.push(...response.translations);
       detectedSourceLanguage ||= response.detectedSourceLanguage || '';
-      onProgress?.(Math.min(index + slice.length, texts.length), texts.length);
+      onProgress?.(Math.min(index + slice.length, entries.length), entries.length);
     }
 
-    if (translatedTexts.length !== nodes.length) {
+    if (translatedTexts.length !== entries.length) {
       throw new Error(
         t('receivedMismatchNode', [
           translatedTexts.length.toString(),
           translatedTexts.length === 1 ? '' : 's',
-          nodes.length.toString(),
-          nodes.length === 1 ? '' : 's'
+          entries.length.toString(),
+          entries.length === 1 ? '' : 's'
         ])
       );
     }
@@ -290,7 +322,8 @@ export class PageTranslator {
     let detachedCount = 0;
     let unchangedCount = 0;
 
-    nodes.forEach((node, index) => {
+    entries.forEach((entry, index) => {
+      const { node, text: sourceText } = entry;
       const currentText = node.nodeValue ?? '';
       const translated = translatedTexts[index];
       if (typeof translated !== 'string') {
@@ -298,6 +331,11 @@ export class PageTranslator {
       }
 
       if (!node.isConnected) {
+        detachedCount += 1;
+        return;
+      }
+
+      if (currentText !== sourceText) {
         detachedCount += 1;
         return;
       }
@@ -319,7 +357,7 @@ export class PageTranslator {
     }
 
     return {
-      totalNodes: nodes.length,
+      totalNodes: entries.length,
       appliedCount,
       detachedCount,
       unchangedCount,
@@ -350,12 +388,11 @@ export class PageTranslator {
         }
 
         const tag = parent.tagName.toLowerCase();
-        if (['script', 'style', 'noscript', 'textarea', 'input', 'select', 'option', 'code', 'pre', 'kbd', 'samp'].includes(tag)) {
+        if (SKIPPED_TAGS.has(tag)) {
           return NodeFilter.FILTER_REJECT;
         }
 
-        const style = window.getComputedStyle(parent);
-        if (style.display === 'none' || style.visibility === 'hidden') {
+        if (this.isHiddenByAncestor(parent)) {
           return NodeFilter.FILTER_REJECT;
         }
 
@@ -374,6 +411,24 @@ export class PageTranslator {
     }
 
     return nodes;
+  }
+
+  private isHiddenByAncestor(element: HTMLElement): boolean {
+    let current: HTMLElement | null = element;
+    while (current && current !== document.body) {
+      if (current.hidden || current.getAttribute('aria-hidden') === 'true') {
+        return true;
+      }
+
+      const style = window.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return true;
+      }
+
+      current = current.parentElement;
+    }
+
+    return false;
   }
 
   private ensureBar(): void {
@@ -457,7 +512,7 @@ export class PageTranslator {
 
   private updateBarButtons(): void {
     if (this.toggleOriginalButton) {
-      this.toggleOriginalButton.textContent = this.showingOriginal ? 'Show translation' : 'Show original';
+      this.toggleOriginalButton.textContent = this.showingOriginal ? t('barShowTranslation') : t('barShowOriginal');
       this.toggleOriginalButton.disabled = !this.translated;
     }
   }
@@ -501,7 +556,7 @@ export class PageTranslator {
       return t('updatedBeforeWriteback', [subject]);
     }
 
-    if (stats.unchangedCount === stats.totalNodes && stats.totalNodes > 0) {
+    if (stats.detachedCount + stats.unchangedCount === stats.totalNodes && stats.unchangedCount > 0) {
       return t('translatedMatchedOriginal', [scope === 'page' ? 'page text' : 'block text']);
     }
 

@@ -235,6 +235,9 @@ export class LibreTranslateEngine extends BaseTranslationEngine {
     if (!cached) {
       cached = this.requestJson<LibreTranslateLanguage[]>(url, {
         method: 'GET',
+      }).catch((error: unknown) => {
+        this.supportedLanguagesCache.delete(url);
+        throw error;
       });
       this.supportedLanguagesCache.set(url, cached);
     }

@@ -1,4 +1,4 @@
-import { isHotkeyMatch } from '../utils/hotkeys';
+import { isHotkeyMatch, isEditableElement } from '../utils/hotkeys';
 
 import type { HotkeyConfig } from '../types';
 
@@ -21,17 +21,22 @@ export class HotkeyManager {
   }
 
   handleKeydown = (event: KeyboardEvent): void => {
+    const targetIsEditable = isEditableElement(event.target instanceof Element ? event.target : null);
     const matchesSelection = isHotkeyMatch(event, this.hotkeys.selection);
-    const matchesSilent = isHotkeyMatch(event, this.hotkeys.silent);
-    const matchesBilingual = isHotkeyMatch(event, this.hotkeys.bilingual);
-    const matchesPage = isHotkeyMatch(event, this.hotkeys.page);
-    const matchesRestore = isHotkeyMatch(event, this.hotkeys.restore);
-
     if (matchesSelection) {
       event.preventDefault();
       void this.actions.selection();
       return;
     }
+
+    if (targetIsEditable) {
+      return;
+    }
+
+    const matchesSilent = isHotkeyMatch(event, this.hotkeys.silent);
+    const matchesBilingual = isHotkeyMatch(event, this.hotkeys.bilingual);
+    const matchesPage = isHotkeyMatch(event, this.hotkeys.page);
+    const matchesRestore = isHotkeyMatch(event, this.hotkeys.restore);
 
     if (matchesSilent) {
       event.preventDefault();
