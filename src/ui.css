@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.ts";
 
 @layer base {
   :root {
@@ -65,7 +64,7 @@
   }
 
   .field {
-    @apply w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-100 outline-none transition duration-200 focus:border-teal-300/60 focus:ring-2 focus:ring-teal-300/20;
+    @apply w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-100 outline-hidden transition duration-200 focus:border-teal-300/60 focus:ring-2 focus:ring-teal-300/20;
   }
 
   html[data-theme='light'] .field {
@@ -81,7 +80,7 @@
   }
 
   .pill-button {
-    @apply inline-flex items-center justify-center rounded-full bg-gradient-to-r from-teal-300 via-cyan-300 to-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 transition;
+    @apply inline-flex items-center justify-center rounded-full bg-linear-to-r from-teal-300 via-cyan-300 to-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 transition;
   }
 
   .ghost-button {
