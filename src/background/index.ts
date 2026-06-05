@@ -24,7 +24,7 @@ import type {
   TranslatePayload,
   TranslateResponse,
 } from '../types';
-import { BATCH_SIZE, ENGINE_META, RATE_LIMIT_MS } from '../utils/constants';
+import { BATCH_SIZE, ENGINE_META, RATE_LIMIT_MS, REQUEST_CONCURRENCY } from '../utils/constants';
 import { getUILanguage, setUILanguagePreference, t } from '../utils/i18n';
 
 const MENU_TRANSLATE_SELECTION = 'silence-translator:translate-selection';
@@ -35,8 +35,13 @@ const MENU_SILENT_FULL_PAGE = 'silence-translator:silent-full-page';
 const MENU_OPEN_OPTIONS = 'silence-translator:open-options';
 const COMMANDS = new Set<CommandName>(['translate-selection', 'silent-translate', 'bilingual-translate', 'toggle-page-translate', 'restore-original']);
 
-const engineQueues = new Map<EngineProvider, Promise<unknown>>();
-const lastExecution = new Map<EngineProvider, number>();
+interface EngineGate {
+  active: number;
+  lastStart: number;
+  waiters: Array<() => void>;
+}
+
+const engineGates = new Map<EngineProvider, EngineGate>();
 
 function sleep(duration: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, duration));
@@ -89,22 +94,30 @@ function assertEngineConfigured(provider: EngineProvider, config: EngineConfig):
 }
 
 async function withRateLimit<T>(provider: EngineProvider, task: () => Promise<T>): Promise<T> {
-  const previous = engineQueues.get(provider) ?? Promise.resolve();
-  const run = previous.catch(() => undefined).then(async () => {
-    const waitMs = Math.max(0, (lastExecution.get(provider) ?? 0) + RATE_LIMIT_MS[provider] - Date.now());
+  const gate = engineGates.get(provider) ?? { active: 0, lastStart: 0, waiters: [] };
+  engineGates.set(provider, gate);
+
+  const limit = Math.max(1, REQUEST_CONCURRENCY[provider] ?? 1);
+  const minGap = RATE_LIMIT_MS[provider] ?? 0;
+
+  if (gate.active >= limit) {
+    await new Promise<void>((resolve) => gate.waiters.push(resolve));
+  }
+
+  gate.active += 1;
+
+  try {
+    const waitMs = Math.max(0, gate.lastStart + minGap - Date.now());
     if (waitMs > 0) {
       await sleep(waitMs);
     }
 
-    try {
-      return await task();
-    } finally {
-      lastExecution.set(provider, Date.now());
-    }
-  });
-
-  engineQueues.set(provider, run.then(() => undefined, () => undefined));
-  return run;
+    gate.lastStart = Date.now();
+    return await task();
+  } finally {
+    gate.active -= 1;
+    gate.waiters.shift()?.();
+  }
 }
 
 function getPromptSignature(config: EngineConfig, promptOverride?: string): string {

@@ -1,4 +1,4 @@
-import { BATCH_SIZE } from '../utils/constants';
+import { BATCH_SIZE, REQUEST_CONCURRENCY } from '../utils/constants';
 import type { TranslateBatchResponse, TranslationSettings } from '../types';
 import { t } from '../utils/i18n';
 
@@ -9,6 +9,11 @@ interface NodeRecord {
 
 interface NodeTranslationEntry {
   node: Text;
+  text: string;
+}
+
+interface TranslationRequestGroup {
+  entries: NodeTranslationEntry[];
   text: string;
 }
 
@@ -24,6 +29,9 @@ type SettingsGetter = () => Promise<TranslationSettings>;
 
 const BLOCK_TAGS = new Set(['ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DD', 'DIV', 'DT', 'FIGCAPTION', 'FOOTER', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEADER', 'LI', 'MAIN', 'NAV', 'P', 'SECTION', 'TD', 'TH']);
 const SKIPPED_TAGS = new Set(['script', 'style', 'noscript', 'textarea', 'input', 'select', 'option', 'code', 'pre', 'kbd', 'samp']);
+const GROUP_MARKER_PREFIX = 'ST_PART_BREAK';
+const GROUP_MARKER_PATTERN = new RegExp(`\\s*<<<${GROUP_MARKER_PREFIX}_\\d+>>>\\s*`, 'gu');
+const MAX_GROUP_TEXT_LENGTH = 6000;
 
 export class PageTranslator {
   private records = new Map<Text, NodeRecord>();
@@ -78,7 +86,7 @@ export class PageTranslator {
         }
       });
     } catch (error: unknown) {
-      this.translated = false;
+      this.translated = this.records.size > 0;
       this.showingOriginal = false;
       this.updateBarButtons();
       this.reportStatus(showBar, this.formatError(error), 'error');
@@ -270,25 +278,27 @@ export class PageTranslator {
       };
     }
 
-    const chunkSize = BATCH_SIZE[settings.defaultEngine];
-    const translatedTexts: string[] = [];
+    const groups = this.groupTranslationEntries(entries);
+    const chunkSize = this.getPageBatchSize(settings);
+    const stats: TranslationApplyStats = {
+      totalNodes: entries.length,
+      appliedCount: 0,
+      detachedCount: 0,
+      unchangedCount: 0,
+    };
     let detectedSourceLanguage = '';
+    let processedEntries = 0;
 
-    for (let index = 0; index < entries.length; index += chunkSize) {
-      const slice = entries.slice(index, index + chunkSize);
-      const response = (await chrome.runtime.sendMessage({
-        type: 'TRANSLATE_BATCH',
-        payload: {
-          texts: slice.map((entry) => entry.text),
-          sourceLanguage: settings.sourceLanguage,
-          targetLanguage: settings.targetLanguage,
-          engine: settings.defaultEngine,
-        },
-      })) as TranslateBatchResponse & { error?: string };
+    const slices: TranslationRequestGroup[][] = [];
+    for (let index = 0; index < groups.length; index += chunkSize) {
+      slices.push(groups.slice(index, index + chunkSize));
+    }
 
-      if (response.error) {
-        throw new Error(response.error);
-      }
+    const tasks = slices.map((slice) => async () => {
+      const response = await this.requestTranslationBatch(
+        slice.map((group) => group.text),
+        settings,
+      );
 
       if (response.translations.length !== slice.length) {
         throw new Error(
@@ -302,46 +312,58 @@ export class PageTranslator {
         );
       }
 
-      translatedTexts.push(...response.translations);
+      for (let offset = 0; offset < response.translations.length; offset += 1) {
+        const group = slice[offset];
+        let parts = this.splitTranslatedGroup(response.translations[offset], group.entries.length);
+        if (!parts) {
+          const fallback = await this.requestTranslationBatch(
+            group.entries.map((entry) => entry.text),
+            settings,
+          );
+          parts = fallback.translations;
+          detectedSourceLanguage ||= fallback.detectedSourceLanguage || '';
+        }
+
+        this.applyGroupResult(group, parts, stats);
+        processedEntries += group.entries.length;
+        onProgress?.(Math.min(processedEntries, entries.length), entries.length);
+      }
+
       detectedSourceLanguage ||= response.detectedSourceLanguage || '';
-      onProgress?.(Math.min(index + slice.length, entries.length), entries.length);
+    });
+
+    await this.runWithConcurrency(tasks, Math.max(1, REQUEST_CONCURRENCY[settings.defaultEngine] ?? 1));
+
+    if (detectedSourceLanguage) {
+      this.setStatus(t('detectedLanguages', [detectedSourceLanguage, settings.targetLanguage]));
     }
 
-    if (translatedTexts.length !== entries.length) {
-      throw new Error(
-        t('receivedMismatchNode', [
-          translatedTexts.length.toString(),
-          translatedTexts.length === 1 ? '' : 's',
-          entries.length.toString(),
-          entries.length === 1 ? '' : 's'
-        ])
-      );
-    }
+    stats.detectedSourceLanguage = detectedSourceLanguage || undefined;
+    return stats;
+  }
 
-    let appliedCount = 0;
-    let detachedCount = 0;
-    let unchangedCount = 0;
-
-    entries.forEach((entry, index) => {
+  private applyGroupResult(group: TranslationRequestGroup, parts: string[], stats: TranslationApplyStats): void {
+    group.entries.forEach((entry, index) => {
       const { node, text: sourceText } = entry;
-      const currentText = node.nodeValue ?? '';
-      const translated = translatedTexts[index];
+      const translated = parts[index];
       if (typeof translated !== 'string') {
         throw new Error(t('missingTranslatedFragment', [(index + 1).toString()]));
       }
 
+      const currentText = node.nodeValue ?? '';
+
       if (!node.isConnected) {
-        detachedCount += 1;
+        stats.detachedCount += 1;
         return;
       }
 
       if (currentText !== sourceText) {
-        detachedCount += 1;
+        stats.detachedCount += 1;
         return;
       }
 
       if (translated === currentText) {
-        unchangedCount += 1;
+        stats.unchangedCount += 1;
         return;
       }
 
@@ -349,20 +371,99 @@ export class PageTranslator {
       const original = existing?.original ?? currentText;
       this.records.set(node, { original, translated });
       node.nodeValue = translated;
-      appliedCount += 1;
+      stats.appliedCount += 1;
     });
+  }
 
-    if (detectedSourceLanguage) {
-      this.setStatus(t('detectedLanguages', [detectedSourceLanguage, settings.targetLanguage]));
+  private async runWithConcurrency(tasks: Array<() => Promise<void>>, limit: number): Promise<void> {
+    let cursor = 0;
+    let failure: unknown = null;
+
+    const worker = async (): Promise<void> => {
+      while (cursor < tasks.length && failure === null) {
+        const task = tasks[cursor];
+        cursor += 1;
+        try {
+          await task();
+        } catch (error: unknown) {
+          failure = error;
+          return;
+        }
+      }
+    };
+
+    const workerCount = Math.min(limit, tasks.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+    if (failure !== null) {
+      throw failure;
+    }
+  }
+
+  private async requestTranslationBatch(texts: string[], settings: TranslationSettings): Promise<TranslateBatchResponse> {
+    const response = (await chrome.runtime.sendMessage({
+      type: 'TRANSLATE_BATCH',
+      payload: {
+        texts,
+        sourceLanguage: settings.sourceLanguage,
+        targetLanguage: settings.targetLanguage,
+        engine: settings.defaultEngine,
+      },
+    })) as TranslateBatchResponse & { error?: string };
+
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    return {
-      totalNodes: entries.length,
-      appliedCount,
-      detachedCount,
-      unchangedCount,
-      detectedSourceLanguage: detectedSourceLanguage || undefined,
+    return response;
+  }
+
+  private groupTranslationEntries(entries: NodeTranslationEntry[]): TranslationRequestGroup[] {
+    const groups: TranslationRequestGroup[] = [];
+    let currentEntries: NodeTranslationEntry[] = [];
+    let currentText = '';
+
+    const flush = () => {
+      if (!currentEntries.length) {
+        return;
+      }
+
+      groups.push({ entries: currentEntries, text: currentText });
+      currentEntries = [];
+      currentText = '';
     };
+
+    entries.forEach((entry) => {
+      const nextText = this.buildGroupText([...currentEntries, entry]);
+      if (currentEntries.length && nextText.length > MAX_GROUP_TEXT_LENGTH) {
+        flush();
+      }
+
+      currentEntries.push(entry);
+      currentText = this.buildGroupText(currentEntries);
+    });
+
+    flush();
+    return groups;
+  }
+
+  private getPageBatchSize(settings: TranslationSettings): number {
+    return Math.max(BATCH_SIZE[settings.defaultEngine], 4);
+  }
+
+  private buildGroupText(entries: NodeTranslationEntry[]): string {
+    return entries
+      .map((entry, index) => (index === 0 ? entry.text : `\n<<<${GROUP_MARKER_PREFIX}_${index}>>>\n${entry.text}`))
+      .join('');
+  }
+
+  private splitTranslatedGroup(translated: string, expectedParts: number): string[] | null {
+    if (expectedParts <= 1) {
+      return [translated];
+    }
+
+    const parts = translated.replace(/\r\n/gu, '\n').split(GROUP_MARKER_PATTERN).map((part) => part.trim());
+    return parts.length === expectedParts ? parts : null;
   }
 
   private collectTextNodes(root: ParentNode): Text[] {

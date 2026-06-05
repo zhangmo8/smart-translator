@@ -180,3 +180,23 @@ export const BATCH_SIZE: Record<EngineProvider, number> = {
   doubao: 8,
   deepseek: 8,
 };
+
+// Max number of in-flight requests allowed per engine. Lets full-page
+// translation fan out instead of running one request at a time, while staying
+// conservative enough to avoid rate-limit / 429 errors. RATE_LIMIT_MS still
+// applies as the minimum gap between request starts.
+export const REQUEST_CONCURRENCY: Record<EngineProvider, number> = {
+  baidu: 2,
+  tencent: 2,
+  alibaba: 3,
+  youdao: 3,
+  google: 6,
+  microsoft: 6,
+  deepl: 4,
+  libretranslate: 3,
+  openai: 3,
+  claude: 3,
+  gemini: 3,
+  doubao: 3,
+  deepseek: 3,
+};
