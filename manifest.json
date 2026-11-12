@@ -6,10 +6,8 @@
   "default_locale": "en",
   "minimum_chrome_version": "114",
   "permissions": [
-    "activeTab",
     "storage",
     "contextMenus",
-    "scripting",
     "commands"
   ],
   "host_permissions": [
