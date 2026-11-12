@@ -4,6 +4,18 @@ import { md5Hex } from '../utils/crypto';
 import { normalizeLanguageCode } from '../utils/languages';
 import type { EngineRequest, EngineResponse } from '../types';
 
+// Baidu standard tier allows 1 QPS per account. Detection and translation share
+// that quota, so every HTTP call must be spaced even when they happen inside a
+// single translate() invocation.
+const BAIDU_MIN_HTTP_INTERVAL_MS = 1050;
+const BAIDU_QPS_ERROR_CODE = '54003';
+const BAIDU_QPS_RETRY_LIMIT = 2;
+const BAIDU_QPS_RETRY_DELAY_MS = 1100;
+
+function sleep(duration: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, duration));
+}
+
 interface BaiduTranslationResponse {
   error_code?: string;
   error_msg?: string;
@@ -80,6 +92,21 @@ function fromBaiduLanguage(code?: string): string | undefined {
 export class BaiduEngine extends BaseTranslationEngine {
   readonly provider = 'baidu' as const;
 
+  private lastRequestAt = 0;
+  private requestGate: Promise<void> = Promise.resolve();
+
+  private async waitForRequestSlot(): Promise<void> {
+    const slot = this.requestGate.then(async () => {
+      const waitMs = Math.max(0, this.lastRequestAt + BAIDU_MIN_HTTP_INTERVAL_MS - Date.now());
+      if (waitMs > 0) {
+        await sleep(waitMs);
+      }
+      this.lastRequestAt = Date.now();
+    });
+    this.requestGate = slot.catch(() => undefined);
+    await slot;
+  }
+
   async translate(request: EngineRequest): Promise<EngineResponse> {
     const appId = this.requireApiKey(request.config.apiKey, 'APP ID');
     const secretKey = this.requireApiSecret(request.config.apiSecret, 'Secret key');
@@ -104,7 +131,14 @@ export class BaiduEngine extends BaseTranslationEngine {
         continue;
       }
 
-      const response = await this.requestTranslation(text, source, target, appId, secretKey);
+      let response = await this.requestTranslation(text, source, target, appId, secretKey);
+
+      // 54003 is transient QPS throttling (e.g. when the same APP ID is also
+      // used elsewhere), so back off and retry before failing the batch.
+      for (let attempt = 1; response.error_code === BAIDU_QPS_ERROR_CODE && attempt <= BAIDU_QPS_RETRY_LIMIT; attempt += 1) {
+        await sleep(BAIDU_QPS_RETRY_DELAY_MS * attempt);
+        response = await this.requestTranslation(text, source, target, appId, secretKey);
+      }
 
       if (response.error_code) {
         throw new Error(`baidu request failed (${response.error_code}): ${response.error_msg ?? 'Unknown error'}`);
@@ -138,13 +172,15 @@ export class BaiduEngine extends BaseTranslationEngine {
     });
 
     try {
-      const response = await this.requestJson<BaiduLanguageDetectResponse>('https://fanyi-api.baidu.com/api/trans/vip/language', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        body: params.toString(),
-      });
+      const response = await this.waitForRequestSlot().then(() =>
+        this.requestJson<BaiduLanguageDetectResponse>('https://fanyi-api.baidu.com/api/trans/vip/language', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          },
+          body: params.toString(),
+        }),
+      );
 
       if (response.error_code && `${response.error_code}` !== '0') {
         return undefined;
@@ -173,12 +209,14 @@ export class BaiduEngine extends BaseTranslationEngine {
       sign: md5Hex(`${appId}${text}${salt}${secretKey}`),
     });
 
-    return this.requestJson<BaiduTranslationResponse>('https://fanyi-api.baidu.com/api/trans/vip/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      },
-      body: params.toString(),
-    });
+    return this.waitForRequestSlot().then(() =>
+      this.requestJson<BaiduTranslationResponse>('https://fanyi-api.baidu.com/api/trans/vip/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        },
+        body: params.toString(),
+      }),
+    );
   }
 }

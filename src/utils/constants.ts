@@ -150,7 +150,8 @@ export const CACHE_LIMIT = 300;
 export const TRANSLATION_CACHE_VERSION = '2026-03-17-2';
 
 export const RATE_LIMIT_MS: Record<EngineProvider, number> = {
-  baidu: 260,
+  // Baidu standard tier allows 1 QPS; anything faster fails with error 54003.
+  baidu: 1100,
   tencent: 220,
   alibaba: 160,
   youdao: 220,
@@ -186,7 +187,8 @@ export const BATCH_SIZE: Record<EngineProvider, number> = {
 // conservative enough to avoid rate-limit / 429 errors. RATE_LIMIT_MS still
 // applies as the minimum gap between request starts.
 export const REQUEST_CONCURRENCY: Record<EngineProvider, number> = {
-  baidu: 2,
+  // Baidu enforces 1 QPS per account, so keep a single serialized lane.
+  baidu: 1,
   tencent: 2,
   alibaba: 3,
   youdao: 3,
